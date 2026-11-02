@@ -12,18 +12,19 @@
 //   node --import tsx scripts/codex-runtime-ab/source-run-check.mjs --mock
 //   node --import tsx scripts/codex-runtime-ab/source-run-check.mjs --from-codex-home ~/.codex
 //
-// All OpenCreator data lives in a fresh directory under --work-dir; the production app data,
-// database and Runtime Home are never used. --from-codex-home is only read (the daemon copies
-// auth.json and the minimal config exactly like the desktop app does) and must hold a ChatGPT
-// login: anything else is refused before a request is sent. The project folder lives in the
-// system temp directory, outside any git checkout, like a real OpenCreator project. Tokens,
-// e-mail addresses and file contents of auth/config are never printed.
+// All OpenCreator data lives in a fresh directory under --home-root (default
+// ~/.opencreator-isolated/source-run) and is removed afterwards; reports stay under --work-dir.
+// The production app data, database and Runtime Home are never used. --from-codex-home is only
+// read (the daemon copies auth.json and the minimal config exactly like the desktop app does)
+// and must hold a ChatGPT login: anything else is refused before a request is sent. The project
+// folder lives in the system temp directory, outside any git checkout, like a real OpenCreator
+// project. Tokens, e-mail addresses and file contents of auth/config are never printed.
 import { createRequire } from 'node:module';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmdirSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { requireChatgptLogin } from './codex-ab.mjs';
+import { requireChatgptLogin, staleTokenMessage } from './codex-ab.mjs';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(SCRIPT_DIR, '../..');
@@ -39,6 +40,7 @@ const SUBTITLE_USER = [
 function parseArgs(argv) {
   const options = {
     workDir: join(REPO_ROOT, '.tmp', 'codex-source-run'),
+    homeRoot: join(homedir(), '.opencreator-isolated', 'source-run'),
     runtimeRoot: join(REPO_ROOT, 'apps', 'desktop', '.pack', 'codex-runtime'),
     keep: false,
     timeoutMs: 180_000
@@ -56,6 +58,7 @@ function parseArgs(argv) {
     else if (flag === '--model') options.model = next();
     else if (flag === '--runtime-root') options.runtimeRoot = resolve(next());
     else if (flag === '--work-dir') options.workDir = resolve(next());
+    else if (flag === '--home-root') options.homeRoot = resolve(next().replace(/^~(?=$|\/)/, homedir()));
     else if (flag === '--keep') options.keep = true;
     else if (flag === '--allow-refresh') options.allowRefresh = true;
     else if (flag === '--timeout-ms') options.timeoutMs = Number(next());
@@ -78,24 +81,33 @@ const redact = text => String(text)
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
-    process.stdout.write('Usage: node --import tsx scripts/codex-runtime-ab/source-run-check.mjs --mock | --from-codex-home <dir> [--model <slug>] [--keep]\n');
+    process.stdout.write('Usage: node --import tsx scripts/codex-runtime-ab/source-run-check.mjs --mock | --from-codex-home <dir> [--model <slug>] [--work-dir <reports>] [--home-root <dir>] [--keep]\n');
     return;
   }
   const { verifyCodexRuntime } = await import(pathToFileURL(join(REPO_ROOT, 'apps', 'desktop', 'scripts', 'codex-runtime-contract.mjs')).href);
   const manifest = verifyCodexRuntime(options.runtimeRoot, process.platform, process.arch);
   const codexBin = join(options.runtimeRoot, manifest.binary.relativePath);
-  const runRoot = join(options.workDir, `run-${new Date().toISOString().replace(/[:.]/g, '-')}`);
-  const appHome = join(runRoot, 'opencreator-home');
+  const runName = `run-${new Date().toISOString().replace(/[:.]/g, '-')}`;
+  const runRoot = join(options.workDir, runName);
+  // The OpenCreator home (Runtime Homes, data, Creator workspaces) sits outside the checkout, so
+  // no turn picks up the repository's AGENTS.md, and outside the system temp directory, because
+  // Codex refuses to put its helper aliases (apply_patch on PATH) under a temporary CODEX_HOME.
+  const appHome = join(options.homeRoot, runName);
   const dataDir = join(appHome, 'data');
   const codexHome = join(appHome, 'runtime', 'codex');
   // Outside the checkout, so Codex does not add the repository's AGENTS.md to the prompts.
   const projectDir = realpathSync(mkdtempSync(join(tmpdir(), 'opencreator-source-run-')));
-  for (const dir of [dataDir, codexHome]) mkdirSync(dir, { recursive: true, mode: 0o700 });
+  for (const dir of [runRoot, dataDir, codexHome]) mkdirSync(dir, { recursive: true, mode: 0o700 });
   // The isolated homes hold a copy of the ChatGPT credential: remove them on every exit path.
   const cleanup = () => {
     if (options.keep) return;
-    for (const dir of ['opencreator-home', 'local-codex']) rmSync(join(runRoot, dir), { recursive: true, force: true });
+    rmSync(appHome, { recursive: true, force: true });
+    rmSync(join(runRoot, 'local-codex'), { recursive: true, force: true });
     rmSync(projectDir, { recursive: true, force: true });
+    // Drop the parents only when they are empty (an isolated test package may live next to them).
+    for (const dir of [options.homeRoot, dirname(options.homeRoot)]) {
+      try { rmdirSync(dir); } catch { /* not empty or already gone */ }
+    }
   };
   process.once('exit', cleanup);
   for (const signal of ['SIGINT', 'SIGTERM']) {
@@ -125,7 +137,7 @@ async function main() {
     if (!existsSync(authPath)) throw new Error(`No auth.json in ${localCodexHome}`);
     const freshness = requireChatgptLogin(readFileSync(authPath, 'utf8'), localCodexHome);
     if (!freshness.fresh && !options.allowRefresh) {
-      throw new Error('The ChatGPT access token in the source home expires within 30 minutes. Keep using the official Codex app until it has refreshed the token in place (it refreshes in the last minutes before expiry), then rerun. --allow-refresh overrides this, but refreshing a copy can sign the official app out.');
+      throw new Error(staleTokenMessage(freshness));
     }
   }
   // Same rule as codex-ab.mjs, plus provider keys: Codex honours e.g. CODEX_ACCESS_TOKEN and
@@ -365,11 +377,11 @@ async function main() {
         const run = await waitRun(created.json.id, ['succeeded', 'failed', 'canceled']);
         return { status: options.mock ? 'FAIL' : 'UNVERIFIED', note: 'the model finished without requesting an approval', runStatus: run.status, model: approvalModel };
       }
-      // Approve only the exact command in the check project; anything else runs outside the
-      // sandbox with your permissions, so reject it.
+      // Approve only the exact command in the check project folder; anything else would run
+      // outside the sandbox with your permissions, so reject it.
       const command = typeof approval.details?.command === 'string' ? approval.details.command : '';
       const cwd = typeof approval.details?.cwd === 'string' && existsSync(approval.details.cwd) ? realpathSync(approval.details.cwd) : undefined;
-      const expected = approval.kind === 'command_execution' && isExpectedTouchCommand(command) && (cwd === undefined || cwd === projectDir);
+      const expected = approval.kind === 'command_execution' && isExpectedTouchCommand(command) && cwd === projectDir;
       if (!expected) {
         const decision = await api('POST', `/approvals/${approval.id}/reject`);
         const run = await waitRun(created.json.id, ['succeeded', 'failed', 'canceled']);

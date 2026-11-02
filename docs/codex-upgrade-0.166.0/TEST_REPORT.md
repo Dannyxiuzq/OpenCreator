@@ -1,7 +1,7 @@
 # 测试报告：内置 Codex 0.149.0 → 0.166.0
 
 > 日期：2026-11-02
-> 分支：`claude/funny-gauss-fclzeh`（相对基线 `31c350b` 的三个代码提交，加本文档提交）
+> 分支：`claude/funny-gauss-fclzeh`（相对基线 `31c350b` 的提交清单见 ROLLBACK.md 第 2 节）
 > 执行环境：Claude Code 云端 Linux 容器（x86_64），Node 22.23.4，pnpm 9.15.0，Go 1.24.7；没有 CJK 字体；没有 Mac；网络策略阻断 `chatgpt.com`、Electron headers 和 Chromium headless shell 的下载源。
 
 本报告只列出**实际执行过**的检查。没有执行的项目一律标为“未验证”，并写明原因。
@@ -87,7 +87,7 @@
   - 在临时目录之外的 home 中（`~/.codex` 属于这种情况），`--version` 会创建并保留 `tmp/arg0-<os>/codex-arg0*/`（`.lock` 和 `apply_patch` 等符号链接），`features list` 会留下空的 `tmp/arg0-<os>/`。两者都不创建 sqlite。
   - 图像生成路径会以 `CODEX_HOME=~/.codex` 运行这些命令，原生生图还会运行 `exec --ephemeral` 并迁移 `~/.codex` 的状态库（既有设计）。MAC_RUNBOOK 因此要求先备份 `~/.codex`，并在验收中避开图像生成。
 - 源码运行检查以 `--keep` 跑完全部 9 项后，作为源的假 `~/.codex`（位于系统临时目录之外）中只有原来的 `auth.json` 和 `config.toml`，确认检查脚本不会在源 home 中运行 Codex。
-- 审查发现对照脚本的 `codex --version` 去掉了 `CODEX_HOME`，会在默认的 `~/.codex/tmp/` 下留下辅助链接；现已改为临时 home。复验方法：把 `HOME` 设为系统临时目录之外的假目录，并让 `--from-codex-home` 指向其中的 `.codex`（源 home 与默认 home 是同一个目录，与 Mac 上的情形相同）。对照脚本和源码运行检查跑完后，该假 HOME 中没有任何变化。
+- 审查发现对照脚本的 `codex --version` 去掉了 `CODEX_HOME`，会在默认的 `~/.codex/tmp/` 下留下辅助链接；现已改为临时 home。复验方法：把 `HOME` 设为系统临时目录之外的假目录，并让 `--from-codex-home` 指向其中的 `.codex`（源 home 与默认 home 是同一个目录，与 Mac 上的情形相同）。对照脚本跑完后，该假 HOME 完全没有变化。源码运行检查跑完后，假 `~/.codex` 没有变化：检查用的 OpenCreator 数据目录建在假 HOME 的 `.opencreator-isolated/source-run/` 下，结束时连同空的父目录一起删除。
 
 ### 3.6 版本对照（`scripts/codex-runtime-ab/codex-ab.mjs`，离线）
 
@@ -129,6 +129,8 @@
 mock 记录：所有模型请求均为 `version=0.166.0`、`originator=opencreator-agent`。
 
 `--mock --model gpt-5.5`（config 中的模型仍为 gpt-6.1-terra）：9/9 通过。gpt-5.5 在 Codex 的完整模型列表中，但不在选择器中（选择器只保留最新两个 GPT 版本族）。对话请求经 mock 记录确认只携带 `gpt-5.5`；Creator Agent 和字幕翻译按实际使用的 config 模型标注为 gpt-6.1-terra。审查前，`--model` 只改了检查项名称，对话实际仍使用 config 中的模型。
+
+数据目录的位置：OpenCreator 的数据目录默认建在 `~/.opencreator-isolated/source-run/`（仓库和系统临时目录之外）。用 `--keep` 保留的 Codex 状态中搜不到本仓库 AGENTS.md 的内容；对照组把数据目录放在仓库内，Creator Agent 和字幕翻译的两个会话都带上了它。会话记录中能搜到提示原文，说明这种搜索方法有效。审批检查现在要求命令和 cwd 都与预期一致，修改后 9/9 仍然通过。
 
 隔离：检查进程把服务商凭据文件指向独立目录中不存在的 `.env.local`，并清除 `VOLCENGINE_*` 环境变量。用临时 HOME 中的假 `~/.opencreator/.env.local` 验证：不设置时 daemon 的加载函数读到两个火山引擎键，设置后读到的为空。
 

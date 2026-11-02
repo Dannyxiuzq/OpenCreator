@@ -34,10 +34,10 @@ pnpm --filter @opencreator/protocol build && pnpm --filter @opencreator/config b
 B="$HOME/codex-home-backup-$(date +%Y%m%d-%H%M%S)"; mkdir -m 700 "$B" && ditto ~/.codex "$B/dot-codex" && echo "$B"
 ```
 
-记录基准（只记录修改时间、大小和路径，不读取内容；包括正式 Runtime Home 中的 Codex 状态库和 sqlite 的 WAL 文件）：
+记录基准（只记录修改时间、大小和路径，不读取内容；包括正式 Runtime Home 中的 Codex 状态库、sqlite 的 WAL 文件，以及 `~/.codex/tmp` 下两层内的辅助目录）：
 
 ```bash
-{ stat -f '%m %z %N' ~/.opencreator/config.toml /Applications/OpenCreator.app/Contents/Info.plist; find ~/.opencreator/data ~/.opencreator/runtime -maxdepth 2 -name '*.sqlite*' -exec stat -f '%m %z %N' {} +; find ~/.codex -maxdepth 1 \( -name '*.sqlite*' -o -name config.toml -o -name auth.json -o -name tmp -o -name skills \) -exec stat -f '%m %z %N' {} +; } 2>/dev/null | sort -k3 | tee "$HOME/opencreator-baseline-before.txt"
+{ stat -f '%m %z %N' ~/.opencreator/config.toml /Applications/OpenCreator.app/Contents/Info.plist; find ~/.opencreator/data ~/.opencreator/runtime -maxdepth 2 -name '*.sqlite*' -exec stat -f '%m %z %N' {} +; find ~/.codex -maxdepth 1 \( -name '*.sqlite*' -o -name config.toml -o -name auth.json -o -name tmp -o -name skills \) -exec stat -f '%m %z %N' {} +; find ~/.codex/tmp -mindepth 1 -maxdepth 2 -exec stat -f '%m %z %N' {} +; } 2>/dev/null | sort -k3 | tee "$HOME/opencreator-baseline-before.txt"
 ```
 
 ## 2. 同账号、同配置、同模型的版本对照（先诊断）
@@ -82,10 +82,10 @@ node scripts/codex-runtime-ab/codex-ab.mjs --login --keep-login
 它会打开浏览器，用你自己的 ChatGPT 账号登录一次。凭据以 file 方式保存在 `.tmp/codex-ab/login-home/auth.json`（权限 0600），不改动 keyring 中的登录，同时完成一次版本对照。之后：
 
 - 第 3 步改用 `--from-codex-home .tmp/codex-ab/login-home`。
-- 第 5 步改用下面的命令启动测试包，让它从这个目录同步登录。Desktop 把启动时的 `CODEX_HOME` 当作要同步的本机 Codex home，自己的 Runtime Home 不受影响：
+- 第 5 步改用下面的命令启动测试包，让它从这个目录同步登录。Desktop 把启动时的 `CODEX_HOME` 当作要同步的本机 Codex home，自己的 Runtime Home 不受影响。从终端启动会继承 shell 的环境变量，所以命令里顺带去掉了付费服务的凭据变量：
 
 ```bash
-CODEX_HOME="$PWD/.tmp/codex-ab/login-home" "$HOME/OpenCreator-Isolated/OpenCreator Codex 0166.app/Contents/MacOS/OpenCreator"
+env -u VOLCENGINE_APP_ID -u VOLCENGINE_ACCESS_TOKEN -u OPENAI_API_KEY CODEX_HOME="$PWD/.tmp/codex-ab/login-home" "$HOME/OpenCreator-Isolated/OpenCreator Codex 0166.app/Contents/MacOS/OpenCreator"
 ```
 
 ## 3. 源码运行验收（真实账号，独立数据目录）
@@ -102,9 +102,9 @@ pnpm --filter @opencreator/desktop prepare:codex-runtime
 node --import tsx scripts/codex-runtime-ab/source-run-check.mjs --from-codex-home ~/.codex
 ```
 
-- 数据写在 `.tmp/codex-source-run/run-*/` 下的全新目录，结束后自动删除，只保留 `report.json`。
+- OpenCreator 的数据目录建在 `~/.opencreator-isolated/source-run/run-*`，结束后自动删除；报告保存在 `.tmp/codex-source-run/run-*/report.json`。数据目录不放在仓库里，是为了不让 Codex 把本仓库的 AGENTS.md 加进提示；也不放在系统临时目录，因为 Codex 在临时目录下的 home 中不创建 `apply_patch` 辅助链接。
 - 服务商凭据文件指向该目录中一个不存在的 `.env.local`，并清除 `VOLCENGINE_*` 环境变量，因此不会读取 `~/.opencreator/.env.local` 中的付费凭据。
-- 审批检查依赖真实模型是否真的请求提权。如果模型没有请求，结果记为 `UNVERIFIED`，不算通过。
+- 审批检查依赖真实模型是否真的请求提权。如果模型没有请求，结果记为 `UNVERIFIED`，不算通过。脚本只批准在检查项目目录中执行的 `touch approved.txt`；模型请求其他命令时会被拒绝，同样记为 `UNVERIFIED`。
 - 任一项为 `FAIL` 时，进程退出码为 1。
 
 ### 3.1 Web 端同流程检查（建议）
@@ -197,7 +197,7 @@ defaults read ~/Library/Preferences/com.apple.LaunchServices/com.apple.launchser
 先退出测试包、正式 OpenCreator 和官方 Codex App/CLI，再执行：
 
 ```bash
-{ stat -f '%m %z %N' ~/.opencreator/config.toml /Applications/OpenCreator.app/Contents/Info.plist; find ~/.opencreator/data ~/.opencreator/runtime -maxdepth 2 -name '*.sqlite*' -exec stat -f '%m %z %N' {} +; find ~/.codex -maxdepth 1 \( -name '*.sqlite*' -o -name config.toml -o -name auth.json -o -name tmp -o -name skills \) -exec stat -f '%m %z %N' {} +; } 2>/dev/null | sort -k3 | diff "$HOME/opencreator-baseline-before.txt" - && echo "production data unchanged"
+{ stat -f '%m %z %N' ~/.opencreator/config.toml /Applications/OpenCreator.app/Contents/Info.plist; find ~/.opencreator/data ~/.opencreator/runtime -maxdepth 2 -name '*.sqlite*' -exec stat -f '%m %z %N' {} +; find ~/.codex -maxdepth 1 \( -name '*.sqlite*' -o -name config.toml -o -name auth.json -o -name tmp -o -name skills \) -exec stat -f '%m %z %N' {} +; find ~/.codex/tmp -mindepth 1 -maxdepth 2 -exec stat -f '%m %z %N' {} +; } 2>/dev/null | sort -k3 | diff "$HOME/opencreator-baseline-before.txt" - && echo "production data unchanged"
 ```
 
 说明：
