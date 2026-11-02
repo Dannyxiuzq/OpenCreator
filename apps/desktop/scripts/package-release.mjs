@@ -31,6 +31,10 @@ import { runParallelStages, runStage } from './script-utils.mjs';
 import { stageReleaseAssets } from './release-assets.mjs';
 import { verifyCreatorRuntimeBuild } from './creator-runtime-build.mjs';
 import {
+  isolatedProfileBuilderArguments,
+  resolveIsolatedProfile
+} from './isolated-profile.mjs';
+import {
   hashDirectory as hashStickmanDirectory,
   hashFile as hashStickmanFile,
   verifyStickmanRuntime
@@ -78,9 +82,18 @@ mkdirSync(releaseDir, { recursive: true });
 mkdirSync(cacheDir, { recursive: true });
 mkdirSync(resolve(desktopDir, '.pack'), { recursive: true });
 const officialBuild = process.env.OPENCREATOR_DESKTOP_OFFICIAL_BUILD === '1';
+const isolatedProfile = resolveIsolatedProfile({
+  requested: process.env.OPENCREATOR_DESKTOP_ISOLATED_PROFILE,
+  officialBuild,
+  mode,
+  signed: signedDirectoryRequested
+});
 writeFileSync(
   resolve(desktopDir, '.pack', 'desktop-build-profile.json'),
-  `${JSON.stringify({ officialBuild }, null, 2)}\n`
+  `${JSON.stringify({
+    officialBuild,
+    ...(isolatedProfile === undefined ? {} : { isolatedProfile })
+  }, null, 2)}\n`
 );
 prepareElectronBuilderCache(env.ELECTRON_BUILDER_CACHE);
 rmSync(manifestPath, { force: true });
@@ -122,6 +135,7 @@ const {
   appleTeamId: process.env.OPENCREATOR_APPLE_TEAM_ID
     ?? process.env.APPLE_TEAM_ID
 });
+args.push(...isolatedProfileBuilderArguments(isolatedProfile, platform));
 const packageWithSigningEnvironment = async builderEnv => {
   const packageStartedAt = Date.now();
   await runStage('构建独立 Remotion 组件与轻量角色资源', process.execPath, [

@@ -26,7 +26,11 @@ import {
   revealPath
 } from './native-actions.js';
 import { NotificationManager } from './notification-manager.js';
-import { resolveDesktopUserDataPath } from './runtime-profile.js';
+import {
+  readIsolatedDesktopProfile,
+  resolveDesktopUserDataPath,
+  resolveIsolatedDesktopPaths
+} from './runtime-profile.js';
 import {
   installProtocolHandler,
   registerPrivilegedSchemes
@@ -55,6 +59,25 @@ if (DEVELOPMENT) {
     'userData',
     resolveDesktopUserDataPath(app.getPath('userData'), true)
   );
+}
+// Isolated test packages keep their own Electron state and OpenCreator data root so they
+// never share the single-instance lock, database or Codex Runtime Home of the installed app.
+const ISOLATED_PROFILE = DEVELOPMENT
+  ? undefined
+  : readIsolatedDesktopProfile(readDesktopBuildProfile(process.resourcesPath));
+if (ISOLATED_PROFILE !== undefined) {
+  const isolated = resolveIsolatedDesktopPaths({
+    appDataDir: app.getPath('appData'),
+    homeDir: app.getPath('home'),
+    profile: ISOLATED_PROFILE,
+    configuredHome: process.env.OPENCREATOR_HOME,
+    configuredProjectRoot: process.env.OPENCREATOR_DEFAULT_PROJECT_ROOT,
+    configuredEnvFile: process.env.OPENCREATOR_ENV_FILE
+  });
+  if (!app.commandLine.hasSwitch('user-data-dir')) app.setPath('userData', isolated.userData);
+  process.env.OPENCREATOR_HOME = isolated.openCreatorHome;
+  process.env.OPENCREATOR_DEFAULT_PROJECT_ROOT = isolated.defaultProjectRoot;
+  process.env.OPENCREATOR_ENV_FILE = isolated.envFile;
 }
 
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
@@ -285,9 +308,11 @@ async function launchDesktop(): Promise<void> {
     navigate,
     quit: () => app.quit()
   });
-  registerApplicationProtocol(development, appRoot, logger);
+  // Isolated test packages must not take over opencreator:// or install official updates.
+  if (ISOLATED_PROFILE === undefined) registerApplicationProtocol(development, appRoot, logger);
   const updater = startUpdater({
     logger,
+    isPackaged: app.isPackaged && ISOLATED_PROFILE === undefined,
     async prepareInstall() {
       windowManager?.flushState();
       settings.flush();
@@ -349,13 +374,17 @@ async function launchDesktop(): Promise<void> {
 }
 
 function readOfficialBuildMarker(resourcesPath: string): boolean {
+  const profile = readDesktopBuildProfile(resourcesPath);
+  return isRecord(profile) && profile.officialBuild === true;
+}
+
+function readDesktopBuildProfile(resourcesPath: string): unknown {
   try {
-    const profile = JSON.parse(
+    return JSON.parse(
       readFileSync(join(resourcesPath, 'desktop-build-profile.json'), 'utf8')
     ) as unknown;
-    return isRecord(profile) && profile.officialBuild === true;
   } catch {
-    return false;
+    return undefined;
   }
 }
 
