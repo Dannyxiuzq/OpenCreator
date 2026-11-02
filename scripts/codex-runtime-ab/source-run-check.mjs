@@ -30,6 +30,7 @@ const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(SCRIPT_DIR, '../..');
 const DAEMON_SRC = join(REPO_ROOT, 'apps', 'daemon', 'src');
 const TOKEN = 'source-run-check';
+const DEFAULT_HOME_ROOT = join(homedir(), '.opencreator-isolated', 'source-run');
 const SUBTITLE_SYSTEM = 'You are an assistant that helps with subtitle translation.';
 const SUBTITLE_USER = [
   'Translate the following subtitles into Simplified Chinese. Keep the numbering and timestamps.',
@@ -40,7 +41,7 @@ const SUBTITLE_USER = [
 function parseArgs(argv) {
   const options = {
     workDir: join(REPO_ROOT, '.tmp', 'codex-source-run'),
-    homeRoot: join(homedir(), '.opencreator-isolated', 'source-run'),
+    homeRoot: DEFAULT_HOME_ROOT,
     runtimeRoot: join(REPO_ROOT, 'apps', 'desktop', '.pack', 'codex-runtime'),
     keep: false,
     timeoutMs: 180_000
@@ -87,11 +88,16 @@ async function main() {
   const { verifyCodexRuntime } = await import(pathToFileURL(join(REPO_ROOT, 'apps', 'desktop', 'scripts', 'codex-runtime-contract.mjs')).href);
   const manifest = verifyCodexRuntime(options.runtimeRoot, process.platform, process.arch);
   const codexBin = join(options.runtimeRoot, manifest.binary.relativePath);
+  // The OpenCreator home is deleted after the run while reports are kept, so they must differ.
+  if (canonicalPath(options.workDir) === canonicalPath(options.homeRoot)) {
+    throw new Error('--work-dir and --home-root must be different directories: the home is deleted after the run, the report is kept');
+  }
   const runName = `run-${new Date().toISOString().replace(/[:.]/g, '-')}`;
   const runRoot = join(options.workDir, runName);
   // The OpenCreator home (Runtime Homes, data, Creator workspaces) sits outside the checkout, so
-  // no turn picks up the repository's AGENTS.md, and outside the system temp directory, because
-  // Codex refuses to put its helper aliases (apply_patch on PATH) under a temporary CODEX_HOME.
+  // no turn picks up the repository's AGENTS.md, and outside the system temp directory like the
+  // real app's Runtime Home (on Linux, Codex refuses to put its apply_patch helper aliases under a
+  // temporary CODEX_HOME; on macOS $TMPDIR resolves through a symlink and that guard does not apply).
   const appHome = join(options.homeRoot, runName);
   const dataDir = join(appHome, 'data');
   const codexHome = join(appHome, 'runtime', 'codex');
@@ -104,24 +110,68 @@ async function main() {
     rmSync(appHome, { recursive: true, force: true });
     rmSync(join(runRoot, 'local-codex'), { recursive: true, force: true });
     rmSync(projectDir, { recursive: true, force: true });
-    // Drop the parents only when they are empty (an isolated test package may live next to them).
-    for (const dir of [options.homeRoot, dirname(options.homeRoot)]) {
-      try { rmdirSync(dir); } catch { /* not empty or already gone */ }
+    // Drop the default parents only when they are empty (an isolated test package may live next
+    // to them). A custom --home-root is left in place.
+    if (options.homeRoot === DEFAULT_HOME_ROOT) {
+      for (const dir of [options.homeRoot, dirname(options.homeRoot)]) {
+        try { rmdirSync(dir); } catch { /* not empty or already gone */ }
+      }
     }
   };
   process.once('exit', cleanup);
-  for (const signal of ['SIGINT', 'SIGTERM']) {
-    process.once(signal, () => {
-      cleanup();
-      process.exit(130);
+
+  // Codex app-servers run detached, outlive this process and would recreate files in the home
+  // after it is deleted, so a signal first stops everything that is still running.
+  let mock;
+  let server;
+  const closers = new Set();
+  let stopping = false;
+  for (const [signal, code] of [['SIGINT', 130], ['SIGTERM', 143], ['SIGHUP', 129]]) {
+    process.on(signal, () => {
+      const finish = async () => {
+        cleanup();
+        // A Codex process that was just told to stop can still flush a few files into the home;
+        // keep deleting until it stays gone.
+        for (let quiet = 0, round = 0; !options.keep && quiet < 4 && round < 20; round += 1) {
+          await sleep(500);
+          if (existsSync(appHome)) {
+            quiet = 0;
+            cleanup();
+          } else {
+            quiet += 1;
+          }
+        }
+        process.exit(code);
+      };
+      if (stopping) {
+        cleanup();
+        process.exit(code);
+      }
+      stopping = true;
+      try {
+        process.stderr.write('\n[source-run] interrupted: stopping Codex processes and removing the test home\n');
+      } catch { /* the terminal may be gone */ }
+      const deadline = setTimeout(finish, 15_000);
+      (async () => {
+        // A check that is still running may register something new while others close.
+        for (let pass = 0; pass < 5 && closers.size > 0; pass += 1) {
+          for (const close of [...closers].reverse()) {
+            closers.delete(close);
+            try { await close(); } catch { /* best effort */ }
+          }
+        }
+      })().finally(() => {
+        clearTimeout(deadline);
+        finish();
+      });
     });
   }
 
-  let mock;
   let localCodexHome = options.sourceHome;
   const scenario = { approvalSeen: false };
   if (options.mock) {
     mock = await startScenarioMock(runRoot, scenario);
+    closers.add(() => mock.close());
     localCodexHome = join(runRoot, 'local-codex');
     mkdirSync(localCodexHome, { recursive: true, mode: 0o700 });
     writeFileSync(join(localCodexHome, 'auth.json'), fakeChatgptAuth(), { mode: 0o600 });
@@ -161,6 +211,7 @@ async function main() {
 
   const results = [];
   const check = async (name, run) => {
+    if (stopping) return;
     const started = Date.now();
     try {
       const evidence = await run();
@@ -168,6 +219,8 @@ async function main() {
     } catch (error) {
       results.push({ name, status: 'FAIL', ms: Date.now() - started, error: redact(error instanceof Error ? error.message : String(error)).slice(0, 600) });
     }
+    // An interrupted run is not a result: checks cut short by the stop are not reported.
+    if (stopping) return;
     const last = results.at(-1);
     console.log(`[source-run] ${last.status.padEnd(9)} ${name} (${last.ms} ms)${last.error ? ` - ${last.error}` : ''}`);
     if (last.status !== 'PASS' && last.evidence !== undefined) console.log(`             evidence: ${JSON.stringify(last.evidence).slice(0, 800)}`);
@@ -182,7 +235,8 @@ async function main() {
     capabilities: snapshot.capabilities, resumeCapabilityVerified: true,
     persistentAppServerEnabled: true, agentToolsEnabled: false, schedulerAutostart: false
   });
-  let server = await start();
+  server = await start();
+  closers.add(() => server?.close());
   const api = async (method, url, payload) => {
     const response = await server.inject({ method, url, headers: { authorization: `Bearer ${TOKEN}` }, ...(payload === undefined ? {} : { payload }) });
     let json;
@@ -236,6 +290,8 @@ async function main() {
       // The picker keeps only the two newest GPT families, so also read Codex's full model list,
       // and the account type straight from Codex.
       const client = createCodexAppServerClient({ codexBin, codexHome, cwd: dataDir });
+      const closeClient = () => client.close();
+      closers.add(closeClient);
       let accountType;
       const catalogIds = [];
       try {
@@ -247,6 +303,7 @@ async function main() {
           cursor = page?.nextCursor ?? undefined;
         } while (cursor !== undefined);
       } finally {
+        closers.delete(closeClient);
         await client.close();
       }
       chatgptLogin = accountType === 'chatgpt';
@@ -423,6 +480,7 @@ async function main() {
     });
 
     await check(`short subtitle translation (Krillin text gateway, ${configModelLabel})`, async () => {
+      if (stopping) throw new Error('interrupted');
       const Fastify = await loadDaemonDependency('fastify');
       const gatewayServer = Fastify();
       // Same construction as apps/daemon/src/api/server.ts.
@@ -431,6 +489,11 @@ async function main() {
         readLocalConfiguration: () => readLocalCodexModelConfiguration({ codexHome: localCodexHome }),
         readConfiguration: createFollowingLocalCodexHome(localCodexHome, join(appHome, 'runtime', 'creator-text-codex'))
       });
+      const closeGateway = async () => {
+        await gateway.close();
+        await gatewayServer.close();
+      };
+      closers.add(closeGateway);
       try {
         await gateway.register(gatewayServer);
         const config = gateway.config('http://127.0.0.1');
@@ -448,14 +511,18 @@ async function main() {
           http: response.statusCode, keepsTimestamps, translation: redact(content).slice(0, 400)
         };
       } finally {
+        closers.delete(closeGateway);
         await gateway.close();
         await gatewayServer.close();
       }
     });
   } finally {
-    await server?.close();
-    await mock?.close();
+    if (!stopping) {
+      await server?.close();
+      await mock?.close();
+    }
   }
+  if (stopping) return;
 
   const report = {
     generatedAt: new Date().toISOString(),
@@ -475,10 +542,20 @@ async function main() {
   if (failed.length > 0) process.exitCode = 1;
 }
 
-// `touch approved.txt`, optionally wrapped in a login shell (`/bin/zsh -lc '...'`).
+// `touch approved.txt`, optionally wrapped in the user's login shell, which Codex names by its
+// path (`/bin/zsh -lc '...'`, `/opt/homebrew/bin/zsh -lc '...'`).
 function isExpectedTouchCommand(command) {
-  const unwrapped = command.trim().replace(/^(?:\/(?:usr\/)?bin\/)?(?:ba|z)?sh\s+-l?c\s+(['"])(.*)\1$/s, '$2').trim();
+  const unwrapped = command.trim()
+    .replace(/^(?:(?:\/[\w.+-]+)*\/)?(?:ba|z)?sh\s+-l?c\s+(['"])(.*)\1$/s, '$2').trim();
   return unwrapped === 'touch approved.txt';
+}
+
+function canonicalPath(path) {
+  try {
+    return realpathSync(path);
+  } catch {
+    return resolve(path);
+  }
 }
 
 function readCodexModel(codexHome) {

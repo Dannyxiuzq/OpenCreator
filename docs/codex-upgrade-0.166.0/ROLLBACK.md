@@ -46,14 +46,15 @@ B="<MAC_RUNBOOK 第 1 节打印的备份目录>"; [ -d "$B/dot-codex" ] && mv ~/
 
 ## 2. 代码回滚
 
-本次改动是分支 `claude/funny-gauss-fclzeh` 上的三个独立代码提交，另有一个文档提交（`docs(codex): …`）和一个检查脚本的后续修正：
+本次改动是分支 `claude/funny-gauss-fclzeh` 上的三个独立代码提交，另有一个文档提交（`docs(codex): …`）和两个检查脚本的后续修正：
 
 | 提交 | 内容 | 可单独回退 |
 | --- | --- | --- |
 | `build(codex): pin bundled Codex runtime to 0.166.0` | manifest、常量、协议快照、生成器修复、适配和测试 | 是（回退后恢复 0.149.0 的完整状态，包括 `generated/v0_149_0`） |
 | `feat(desktop): add an isolated profile for unsigned test packages` | 独立测试包所需的打包和启动隔离 | 是（与 Codex 版本无关） |
-| `test(codex): add same-account A/B and source-run checks` | `scripts/codex-runtime-ab/` 诊断和验收工具 | 是，但要先回退下面的后续修正 |
-| `test(codex): keep source-run state outside the repo and tighten checks` | 检查脚本的后续修正及对应文档 | 是 |
+| `test(codex): add same-account A/B and source-run checks` | `scripts/codex-runtime-ab/` 诊断和验收工具 | 是，但要先回退下面两个后续修正 |
+| `test(codex): keep source-run state outside the repo and tighten checks` | 检查脚本的后续修正及对应文档 | 是，但要先回退下一行的提交 |
+| `test(codex): stop Codex children before source-run cleanup` | 中断时的清理、目录冲突检查、审批匹配，以及对应文档 | 是 |
 
 按需回退（以实际提交号为准，可用 `git log --oneline` 查看）：
 

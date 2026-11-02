@@ -102,9 +102,9 @@ pnpm --filter @opencreator/desktop prepare:codex-runtime
 node --import tsx scripts/codex-runtime-ab/source-run-check.mjs --from-codex-home ~/.codex
 ```
 
-- OpenCreator 的数据目录建在 `~/.opencreator-isolated/source-run/run-*`，结束后自动删除；报告保存在 `.tmp/codex-source-run/run-*/report.json`。数据目录不放在仓库里，是为了不让 Codex 把本仓库的 AGENTS.md 加进提示；也不放在系统临时目录，因为 Codex 在临时目录下的 home 中不创建 `apply_patch` 辅助链接。
+- OpenCreator 的数据目录建在 `~/.opencreator-isolated/source-run/run-*`，结束后自动删除；中途按 Ctrl-C 或关闭终端时，脚本会先停止 Codex 进程，再删除它。报告保存在 `.tmp/codex-source-run/run-*/report.json`，所以 `--work-dir` 和 `--home-root` 不能指向同一个目录。数据目录不放在仓库里，是为了不让 Codex 把本仓库的 AGENTS.md 加进提示；也不放在系统临时目录，是为了与正式 App 的 Runtime Home 条件一致（Linux 上 Codex 不会在临时目录下的 home 中创建 `apply_patch` 辅助链接）。
 - 服务商凭据文件指向该目录中一个不存在的 `.env.local`，并清除 `VOLCENGINE_*` 环境变量，因此不会读取 `~/.opencreator/.env.local` 中的付费凭据。
-- 审批检查依赖真实模型是否真的请求提权。如果模型没有请求，结果记为 `UNVERIFIED`，不算通过。脚本只批准在检查项目目录中执行的 `touch approved.txt`；模型请求其他命令时会被拒绝，同样记为 `UNVERIFIED`。
+- 审批检查依赖真实模型是否真的请求提权。如果模型没有请求，结果记为 `UNVERIFIED`，不算通过。脚本只批准在检查项目目录中执行的 `touch approved.txt`，允许由任意路径下的 sh、bash 或 zsh 用 `-lc` 包装（例如 `/opt/homebrew/bin/zsh -lc '...'`）；模型请求其他命令时会被拒绝，同样记为 `UNVERIFIED`。
 - 任一项为 `FAIL` 时，进程退出码为 1。
 
 ### 3.1 Web 端同流程检查（建议）

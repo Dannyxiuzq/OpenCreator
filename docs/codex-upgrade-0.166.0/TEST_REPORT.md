@@ -83,7 +83,7 @@
 - `exec --help`、`exec resume --help`、`mcp --help`、`mcp add --help`、`app-server --help`：0.166.0 相对 0.149.0 只有新增内容。静态能力快照依赖的标记（`--json`、`--profile`、`--cd`、`--sandbox`、`--image`、`--skip-git-repo-check`、`Run the app server`、`generate-ts`、`generate-json-schema`、mcp 子命令、`--bearer-token-env-var`、OAuth 参数）全部存在。
 - OpenCreator 传给 `--disable`/`--enable` 的 13 个特性键（hooks、plugins、apps、multi_agent、browser_use、computer_use、in_app_browser、image_generation、tool_suggest、shell_tool、unified_exec、shell_snapshot、view_image）在 0.166.0 的 `features list` 中都存在，且均为 `stable`。
 - `features list` 和 `--version` 的写入行为（这一项在审查中被纠正）：
-  - 在系统临时目录下的空 `CODEX_HOME` 中不写入任何文件，因为 Codex 不在临时目录下创建辅助别名。
+  - 在系统临时目录下的空 `CODEX_HOME` 中不写入任何文件，因为 Codex 不在临时目录下创建辅助别名（Linux 实测）。按源码，macOS 的 `$TMPDIR` 经过 `/var` → `/private/var` 的符号链接，Codex 的这条判断不生效，仍会创建辅助别名（未在 Mac 上实测）。
   - 在临时目录之外的 home 中（`~/.codex` 属于这种情况），`--version` 会创建并保留 `tmp/arg0-<os>/codex-arg0*/`（`.lock` 和 `apply_patch` 等符号链接），`features list` 会留下空的 `tmp/arg0-<os>/`。两者都不创建 sqlite。
   - 图像生成路径会以 `CODEX_HOME=~/.codex` 运行这些命令，原生生图还会运行 `exec --ephemeral` 并迁移 `~/.codex` 的状态库（既有设计）。MAC_RUNBOOK 因此要求先备份 `~/.codex`，并在验收中避开图像生成。
 - 源码运行检查以 `--keep` 跑完全部 9 项后，作为源的假 `~/.codex`（位于系统临时目录之外）中只有原来的 `auth.json` 和 `config.toml`，确认检查脚本不会在源 home 中运行 Codex。
@@ -130,7 +130,9 @@ mock 记录：所有模型请求均为 `version=0.166.0`、`originator=opencreat
 
 `--mock --model gpt-5.5`（config 中的模型仍为 gpt-6.1-terra）：9/9 通过。gpt-5.5 在 Codex 的完整模型列表中，但不在选择器中（选择器只保留最新两个 GPT 版本族）。对话请求经 mock 记录确认只携带 `gpt-5.5`；Creator Agent 和字幕翻译按实际使用的 config 模型标注为 gpt-6.1-terra。审查前，`--model` 只改了检查项名称，对话实际仍使用 config 中的模型。
 
-数据目录的位置：OpenCreator 的数据目录默认建在 `~/.opencreator-isolated/source-run/`（仓库和系统临时目录之外）。用 `--keep` 保留的 Codex 状态中搜不到本仓库 AGENTS.md 的内容；对照组把数据目录放在仓库内，Creator Agent 和字幕翻译的两个会话都带上了它。会话记录中能搜到提示原文，说明这种搜索方法有效。审批检查现在要求命令和 cwd 都与预期一致，修改后 9/9 仍然通过。
+数据目录的位置：OpenCreator 的数据目录默认建在 `~/.opencreator-isolated/source-run/`（仓库和系统临时目录之外；`--work-dir` 与 `--home-root` 相同时，脚本在启动前拒绝，否则报告会随数据目录一起被删除）。用 `--keep` 保留的 Codex 状态中搜不到本仓库 AGENTS.md 的内容；对照组把数据目录放在仓库内，Creator Agent 和字幕翻译的两个会话都带上了它。会话记录中能搜到提示原文，说明这种搜索方法有效。审批检查现在要求命令和 cwd 都与预期一致；命令允许由任意路径下的 sh/bash/zsh 包装（含 `/opt/homebrew/bin/zsh`），用 10 个样例验证了接受与拒绝，修改后 9/9 仍然通过。
+
+中断：按终端的方式，用最终代码在不同阶段对检查进程所在的进程组发送信号，共 6 次：SIGINT 4 次（取消阶段 3 次、字幕翻译阶段 1 次），SIGHUP 1 次（Creator Agent 阶段），SIGTERM 1 次（同线程续聊之后）。退出码分别为 130、129、143。1、4、8 秒后，测试用的 OpenCreator 数据目录中都没有残留文件，也没有残留的 Codex 进程或 auth.json 副本。修复前有两个问题：一是 Ctrl-C 后，检查流程仍会启动下一项，新启动的 Codex 进程在数据目录删除后又写入了文件；二是 SIGHUP（关闭终端）完全没有处理，ChatGPT 凭据副本会留在磁盘上。
 
 隔离：检查进程把服务商凭据文件指向独立目录中不存在的 `.env.local`，并清除 `VOLCENGINE_*` 环境变量。用临时 HOME 中的假 `~/.opencreator/.env.local` 验证：不设置时 daemon 的加载函数读到两个火山引擎键，设置后读到的为空。
 
