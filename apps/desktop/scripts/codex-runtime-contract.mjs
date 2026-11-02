@@ -8,8 +8,8 @@ import {
 } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
-export const CODEX_RUNTIME_VERSION = '0.149.0';
-export const CODEX_RUNTIME_COMMIT = '758ef40f50c1a458425c7cfbf1eb12cbc07af0b0';
+export const CODEX_RUNTIME_VERSION = '0.166.0';
+export const CODEX_RUNTIME_COMMIT = '6ff1e1ca3b30fc8b914720681fcf5fe62e95f856';
 
 export function readCodexRuntimeManifest(path) {
   if (!existsSync(path)) throw new Error(`Codex Runtime manifest is missing: ${path}`);
@@ -97,7 +97,7 @@ function verifyProtocolTree(root, expectedAggregate) {
   assertRegularFile(manifestPath, `Codex app-server protocol manifest is missing: ${manifestPath}`);
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
   if (
-    manifest.sourceTag !== 'rust-v0.149.0'
+    manifest.sourceTag !== `rust-v${CODEX_RUNTIME_VERSION}`
     || manifest.sourceCommit !== CODEX_RUNTIME_COMMIT
     || manifest.aggregateSha256 !== expectedAggregate
     || manifest.files === null

@@ -138,6 +138,7 @@ import {
   type RunMcpInjector
 } from '../agent-tools/run-injection.js';
 import {
+  BUNDLED_CODEX_COMMIT,
   createUnknownCapabilityMatrix,
   isResumeExecutionSupported,
   withRuntimeSkillCapabilities,
@@ -700,7 +701,7 @@ export async function buildServer(input: BuildServerInput) {
     version: capabilities.codexVersion.replace(/^codex-cli\s+/, ''),
     commit: process.env.OPENCREATOR_CODEX_RUNTIME_MODE === 'external'
       ? null
-      : '758ef40f50c1a458425c7cfbf1eb12cbc07af0b0',
+      : BUNDLED_CODEX_COMMIT,
     binaryPath: codexBin,
     codexHome,
     cwd: dataDir,

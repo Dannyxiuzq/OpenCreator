@@ -39,8 +39,8 @@ describe('Desktop Codex resolver', () => {
       codexBin: fixture.binary,
       codexHome: join(fixture.userDataDir, 'runtime', 'codex'),
       source: 'bundled',
-      version: '0.149.0',
-      commit: '758ef40f50c1a458425c7cfbf1eb12cbc07af0b0'
+      version: '0.166.0',
+      commit: '6ff1e1ca3b30fc8b914720681fcf5fe62e95f856'
     });
     expect(result?.env.PATH).toBe(dirname(pathCodex));
     expect(result?.env.CODEX_HOME).not.toBe(join(tempDir, 'global-home'));
@@ -88,7 +88,7 @@ describe('Desktop Codex resolver', () => {
       mode: 'external',
       externalCodexBin: external,
       userDataDir: join(tempDir, 'user-data'),
-      probeVersion: () => 'codex-cli 0.149.0'
+      probeVersion: () => 'codex-cli 0.166.0'
     });
 
     expect(result).toMatchObject({
@@ -152,8 +152,8 @@ function createBundledFixture() {
   mkdirSync(dirname(binary), { recursive: true });
   writeFileSync(binary, 'codex-0.149.0');
   writeFileSync(manifestPath, JSON.stringify({
-    version: '0.149.0',
-    commit: '758ef40f50c1a458425c7cfbf1eb12cbc07af0b0',
+    version: '0.166.0',
+    commit: '6ff1e1ca3b30fc8b914720681fcf5fe62e95f856',
     platform: process.platform,
     arch: process.arch,
     binary: {

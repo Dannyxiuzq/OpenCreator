@@ -12,8 +12,8 @@ import {
 } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 
-const BUNDLED_VERSION = '0.149.0';
-const BUNDLED_COMMIT = '758ef40f50c1a458425c7cfbf1eb12cbc07af0b0';
+const BUNDLED_VERSION = '0.166.0';
+const BUNDLED_COMMIT = '6ff1e1ca3b30fc8b914720681fcf5fe62e95f856';
 
 export type CodexRuntimeMode = 'bundled' | 'external';
 

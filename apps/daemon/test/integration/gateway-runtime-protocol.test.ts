@@ -14,6 +14,9 @@ import type { GatewayAccountState } from '@opencreator/protocol';
 
 const manifest = JSON.parse(readFileSync(resolve(`../../resources/codex-runtime/${process.platform}-${process.arch}/manifest.json`), 'utf8'));
 const codexBin = resolve('../../apps/desktop/.pack/codex-runtime', manifest.binary.relativePath);
+// Use a model present in the pinned Runtime's bundled catalog (both 0.149.0 and 0.166.0);
+// models outside it fall back to generic metadata without the freeform apply_patch tool.
+const FIXTURE_MODEL = 'gpt-5.5';
 const cleanup: Array<() => Promise<void> | void> = [];
 afterEach(async () => {
   for (const close of cleanup.splice(0).reverse()) await close();
@@ -49,12 +52,12 @@ async function fixture(reply: (res: ServerResponse, requests: ModelRequest[]) =>
     const endpoint = chatMode ? 'chat/completions' : 'responses';
     expect(url).toBe(`${supplierBase}/${endpoint}`);
     return fetch(`http://127.0.0.1:${address.port}/v1/${endpoint}`, options);
-  }, chatMode ? async () => ({ key: 'test-official-key-a', release: async () => {}, models: [{ id: 'gpt-5.2', modality: 'text', capabilities: ['responses', 'responses_via_chat'] }] }) : undefined, undefined, supplierBase) : undefined;
+  }, chatMode ? async () => ({ key: 'test-official-key-a', release: async () => {}, models: [{ id: FIXTURE_MODEL, modality: 'text', capabilities: ['responses', 'responses_via_chat'] }] }) : undefined, undefined, supplierBase) : undefined;
   if (bridge) cleanup.push(() => bridge.close());
   let host: CodexAppServerHost | undefined;
   const binding = createGatewayRuntimeBindings({
     codexHome: join(root, 'official'),
-    baseUrl: bridge?.baseUrl ?? `http://127.0.0.1:${address.port}/v1`, model: 'gpt-5.2',
+    baseUrl: bridge?.baseUrl ?? `http://127.0.0.1:${address.port}/v1`, model: FIXTURE_MODEL,
     readCredentials: async () => ({ accountId: 'a', modelKey: bridge?.token ?? 'test-official-key-a', keyVersion: '1' }),
     closeRuntime: async () => { await host?.close('device_logout', 100); }
   });
@@ -65,7 +68,7 @@ async function fixture(reply: (res: ServerResponse, requests: ModelRequest[]) =>
     codexBin, codexHome: prepared.codexHome, cwd: root, profile: 'default',
     baseEnvironment: prepared.env, spawnTimeoutMs: 10_000, forceKillGraceMs: 100
   });
-  const run = (model = 'gpt-5.2') => host!.run({
+  const run = (model = FIXTURE_MODEL) => host!.run({
     cwd: root, sandbox: 'danger-full-access', model,
     prompt: 'Report the current directory and then say gateway ready.', timeoutMs: 15_000
   });
@@ -79,7 +82,7 @@ function event(res: ServerResponse, type: string, value: Record<string, unknown>
 function complete(res: ServerResponse, output: Record<string, unknown>[]) {
   res.writeHead(200, { 'Content-Type': 'text/event-stream' });
   const response = {
-    id: 'resp_test', object: 'response', created_at: 1, model: 'gpt-5.2',
+    id: 'resp_test', object: 'response', created_at: 1, model: FIXTURE_MODEL,
     status: 'in_progress', output: [],
     usage: { input_tokens: 10, output_tokens: 5, total_tokens: 15 }
   };
@@ -117,7 +120,7 @@ describe('bundled Runtime official gateway boundary', () => {
       expect(f.host.pid).toBe(pid);
       expect(() => process.kill(pid!, 0)).not.toThrow();
       expect(pending.destroyed).toBe(false);
-      expect(f.requests[0]!.body.model).toBe('gpt-5.2');
+      expect(f.requests[0]!.body.model).toBe(FIXTURE_MODEL);
     } finally { complete(pending, [message]); }
     expect((await first.result).turnStatus).toBe('completed');
     expect((await f.run('gpt-4.1-mini').result).turnStatus).toBe('completed');
@@ -136,13 +139,13 @@ describe('bundled Runtime official gateway boundary', () => {
       readState: async (): Promise<GatewayAccountState> => ({
         source: 'gateway', authState: 'signed_in', activationState: 'ready',
         account: { id: 'a', email: 'a@test', verified: true }, bindingVersion: '1',
-        models: [{ id: 'gpt-5.2', modality: 'text', capabilities: ['responses'] }],
-        selectedModels: { text: 'gpt-5.2' }, activationError: null
+        models: [{ id: FIXTURE_MODEL, modality: 'text', capabilities: ['responses'] }],
+        selectedModels: { text: FIXTURE_MODEL }, activationError: null
       }),
       beginModelUse: vi.fn(async () => ({ credentials: {
         accountId: 'a', modelKey: 'test-official-key-a', keyVersion: '1', bindingVersion: '1',
         baseUrl: 'https://openrouter.ai/api/v1', transport: 'openrouter-direct' as const,
-        models: [{ id: 'gpt-5.2', modality: 'text' as const, capabilities: ['responses'] }], defaults: { text: 'gpt-5.2' }
+        models: [{ id: FIXTURE_MODEL, modality: 'text' as const, capabilities: ['responses'] }], defaults: { text: FIXTURE_MODEL }
       }, release }))
     };
     const prepared = await prepareOfficialRuntimeProbe({ account, readProxy: async () => '' });
@@ -176,7 +179,7 @@ describe('bundled Runtime official gateway boundary', () => {
     expect(beginModelUse).not.toHaveBeenCalled();
     Object.assign(state, {
       source: 'gateway', authState: 'signed_in', account: { id: 'a', email: 'a@test', verified: true },
-      models: [{ id: 'gpt-5.2', modality: 'text', capabilities: ['responses'] }], selectedModels: { text: 'gpt-5.2' }
+      models: [{ id: FIXTURE_MODEL, modality: 'text', capabilities: ['responses'] }], selectedModels: { text: FIXTURE_MODEL }
     });
     await expect(prepareOfficialRuntimeProbe({ account, readProxy: async () => '' })).rejects.toThrow('model credentials unavailable');
     expect(beginModelUse).toHaveBeenCalledOnce();

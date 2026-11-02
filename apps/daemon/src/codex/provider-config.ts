@@ -8,7 +8,7 @@ import type {
   GetAccountResponse,
   LoginAccountParams,
   LoginAccountResponse
-} from './generated/v0_149_0/index.js';
+} from './generated/v0_166_0/index.js';
 import type { RestartableCodexAppServerRequestClient } from './app-server-client.js';
 import type { CodexRuntimeReadinessService } from './runtime-readiness.js';
 

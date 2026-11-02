@@ -4,13 +4,13 @@ import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, posix, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const SOURCE_TAG = 'rust-v0.149.0';
-const SOURCE_COMMIT = '758ef40f50c1a458425c7cfbf1eb12cbc07af0b0';
+const SOURCE_TAG = 'rust-v0.166.0';
+const SOURCE_COMMIT = '6ff1e1ca3b30fc8b914720681fcf5fe62e95f856';
 const SCHEMA_ROOT = 'codex-rs/app-server-protocol/schema';
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPOSITORY_ROOT = resolve(SCRIPT_DIR, '../../..');
 const DEFAULT_SOURCE_REPO = join(REPOSITORY_ROOT, 'codex');
-const DEFAULT_OUTPUT = resolve(SCRIPT_DIR, '../src/codex/generated/v0_149_0');
+const GENERATED_ROOT = resolve(SCRIPT_DIR, '../src/codex/generated');
 
 const TYPE_ENTRYPOINTS = [
   'InitializeParams',
@@ -77,7 +77,7 @@ const ROOT_JSON_NAMES = new Set([
 function parseArgs(argv) {
   const result = {
     sourceRepo: DEFAULT_SOURCE_REPO,
-    output: DEFAULT_OUTPUT,
+    output: undefined,
     tag: SOURCE_TAG,
     expectedCommit: SOURCE_COMMIT
   };
@@ -91,7 +91,18 @@ function parseArgs(argv) {
     else continue;
     index += 1;
   }
+  result.output ??= defaultOutputForTag(result.tag);
   return result;
+}
+
+function protocolDirectoryName(tag) {
+  const match = /^rust-v(\d+)\.(\d+)\.(\d+)$/.exec(tag);
+  if (match === null) throw new Error(`Unsupported Codex release tag: ${tag}`);
+  return `v${match[1]}_${match[2]}_${match[3]}`;
+}
+
+function defaultOutputForTag(tag) {
+  return join(GENERATED_ROOT, protocolDirectoryName(tag));
 }
 
 function git(sourceRepo, args) {
@@ -111,7 +122,7 @@ function sha256(content) {
 
 function ensureSafeOutput(output) {
   const normalized = resolve(output);
-  const expectedRoot = resolve(SCRIPT_DIR, '../src/codex/generated');
+  const expectedRoot = GENERATED_ROOT;
   const explicitTemp = normalized.includes(`${sep}.tmp${sep}`);
   if (normalized !== expectedRoot && !normalized.startsWith(`${expectedRoot}${sep}`) && !explicitTemp) {
     throw new Error(`Refusing to generate outside the protocol output roots: ${normalized}`);
@@ -178,8 +189,9 @@ async function generate(options) {
     files.set(`json/${name}.json`, `${JSON.stringify(parsed, null, 2)}\n`);
   }
 
+  const header = `// Generated from Codex ${options.tag}. Do not edit by hand.`;
   const index = [
-    '// Generated from Codex rust-v0.149.0. Do not edit by hand.',
+    header,
     ...TYPE_ENTRYPOINTS.map(name => {
       const symbol = name.split('/').at(-1);
       return `export type { ${symbol} } from './typescript/${name}.js';`;
@@ -201,7 +213,7 @@ async function generate(options) {
   };
   files.set('protocol-manifest.json', `${JSON.stringify(manifest, null, 2)}\n`);
   files.set('metadata.ts', [
-    '// Generated from Codex rust-v0.149.0. Do not edit by hand.',
+    header,
     `export const codexAppServerProtocolSourceTag = '${options.tag}' as const;`,
     `export const codexAppServerProtocolSourceCommit = '${actualCommit}' as const;`,
     `export const codexAppServerProtocolSha256 = '${aggregateSha256}' as const;`,
@@ -234,4 +246,4 @@ if (invokedDirectly) {
     });
 }
 
-export { generate, parseArgs, SOURCE_COMMIT, SOURCE_TAG, TYPE_ENTRYPOINTS };
+export { generate, parseArgs, protocolDirectoryName, SOURCE_COMMIT, SOURCE_TAG, TYPE_ENTRYPOINTS };

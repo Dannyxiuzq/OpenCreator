@@ -65,8 +65,8 @@ export type CollectCodexCapabilityMatrixInput = {
 };
 
 export const STARTUP_CAPABILITY_TIMEOUT_MS = 500;
-export const BUNDLED_CODEX_VERSION = '0.149.0';
-export const BUNDLED_CODEX_COMMIT = '758ef40f50c1a458425c7cfbf1eb12cbc07af0b0';
+export const BUNDLED_CODEX_VERSION = '0.166.0';
+export const BUNDLED_CODEX_COMMIT = '6ff1e1ca3b30fc8b914720681fcf5fe62e95f856';
 
 export type CodexVersionProbeResult = {
   ready: boolean;

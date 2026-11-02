@@ -42,7 +42,8 @@ describe('Codex app-server session provider', () => {
         itemsView: 'summary'
       }],
       ['thread/resume', {
-        threadId: 'codex-thread-persisted'
+        threadId: 'codex-thread-persisted',
+        excludeTurns: true
       }],
       ['thread/turns/list', {
         threadId: 'codex-thread-persisted',

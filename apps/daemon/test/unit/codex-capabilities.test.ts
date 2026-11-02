@@ -76,9 +76,9 @@ describe('codex capability parsing', () => {
     });
 
     expect(snapshot).toMatchObject({
-      version: 'codex-cli 0.149.0',
+      version: 'codex-cli 0.166.0',
       capabilities: {
-        codexVersion: 'codex-cli 0.149.0',
+        codexVersion: 'codex-cli 0.166.0',
         checkedAt: '2026-09-21T00:00:00.000Z',
         execJson: true,
         resumeJson: true,

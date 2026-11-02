@@ -18,7 +18,7 @@ func main() {
 	loadFixtureEnvironment()
 	args := os.Args[1:]
 	if len(args) == 1 && args[0] == "--version" {
-		fmt.Println("codex-cli 0.149.0")
+		fmt.Println("codex-cli 0.166.0")
 		return
 	}
 	if printHelp(args) {

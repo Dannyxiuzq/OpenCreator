@@ -9,12 +9,20 @@ import {
   writeFileSync
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { verifyCodexRuntime } from '../scripts/codex-runtime-contract.mjs';
+import {
+  CODEX_RUNTIME_COMMIT,
+  CODEX_RUNTIME_VERSION,
+  readCodexRuntimeManifest,
+  verifyCodexRuntime
+} from '../scripts/codex-runtime-contract.mjs';
 import { stageCodexRuntime } from '../scripts/prepare-codex-runtime.mjs';
 
 let tempRoot = '';
+const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
+const shippedPlatforms = ['darwin-arm64', 'darwin-x64', 'linux-x64', 'win32-x64'];
 
 afterEach(() => {
   if (tempRoot) rmSync(tempRoot, { recursive: true, force: true });
@@ -27,8 +35,8 @@ describe('Codex Runtime package contract', () => {
     const result = stageCodexRuntime(fixture);
 
     expect(verifyCodexRuntime(result.outputRoot, process.platform, process.arch)).toMatchObject({
-      version: '0.149.0',
-      commit: '758ef40f50c1a458425c7cfbf1eb12cbc07af0b0'
+      version: '0.166.0',
+      commit: '6ff1e1ca3b30fc8b914720681fcf5fe62e95f856'
     });
   });
 
@@ -76,7 +84,7 @@ describe('Codex Runtime package contract', () => {
       protocolRoot: fixture.protocolRoot
     });
     expect(verifyCodexRuntime(result.outputRoot, process.platform, process.arch))
-      .toMatchObject({ version: '0.149.0' });
+      .toMatchObject({ version: '0.166.0' });
 
     writeFileSync(archivePath, 'tampered');
     expect(() => stageCodexRuntime({
@@ -85,6 +93,61 @@ describe('Codex Runtime package contract', () => {
       outputRoot: fixture.outputRoot,
       protocolRoot: fixture.protocolRoot
     })).toThrow(/integrity mismatch/i);
+  });
+
+  it('stages the generated protocol snapshot named by the manifest by default', () => {
+    const fixture = createFixture();
+    const manifest = JSON.parse(readFileSync(fixture.manifestPath, 'utf8'));
+    const snapshot = JSON.parse(readFileSync(join(
+      repositoryRoot, 'apps', 'daemon', 'src', 'codex', 'generated', 'v0_166_0', 'protocol-manifest.json'
+    ), 'utf8'));
+    manifest.appServerProtocol.schemaSha256 = snapshot.aggregateSha256;
+    writeFileSync(fixture.manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+    const result = stageCodexRuntime({
+      manifestPath: fixture.manifestPath,
+      outputRoot: fixture.outputRoot,
+      sourceRoot: fixture.sourceRoot
+    });
+    expect(verifyCodexRuntime(result.outputRoot, process.platform, process.arch))
+      .toMatchObject({ version: '0.166.0' });
+    expect(readFileSync(join(result.outputRoot, 'protocol', 'v0_166_0', 'metadata.ts'), 'utf8'))
+      .toContain("'rust-v0.166.0'");
+
+    manifest.appServerProtocol.sourceVersion = '../v0_166_0';
+    writeFileSync(fixture.manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    expect(() => stageCodexRuntime({
+      manifestPath: fixture.manifestPath,
+      outputRoot: fixture.outputRoot,
+      sourceRoot: fixture.sourceRoot
+    })).toThrow(/invalid app-server protocol source version/i);
+  });
+
+  it('keeps every shipped platform manifest aligned with the contract and protocol snapshot', () => {
+    for (const platform of shippedPlatforms) {
+      const manifest = readCodexRuntimeManifest(
+        join(repositoryRoot, 'resources', 'codex-runtime', platform, 'manifest.json')
+      );
+      expect(`${manifest.platform}-${manifest.arch}`).toBe(platform);
+      expect(manifest).toMatchObject({
+        version: CODEX_RUNTIME_VERSION,
+        tag: `rust-v${CODEX_RUNTIME_VERSION}`,
+        commit: CODEX_RUNTIME_COMMIT,
+        sourcePackage: `npm:@openai/codex@${CODEX_RUNTIME_VERSION}-${platform}`
+      });
+      expect(manifest.officialAsset)
+        .toMatch(new RegExp(`/releases/download/rust-v${CODEX_RUNTIME_VERSION.replaceAll('.', '\\.')}/`));
+      const sourceVersion = manifest.appServerProtocol.sourceVersion;
+      expect(manifest.appServerProtocol.relativePath).toBe(`protocol/${sourceVersion}`);
+      const snapshot = JSON.parse(readFileSync(join(
+        repositoryRoot, 'apps', 'daemon', 'src', 'codex', 'generated', sourceVersion, 'protocol-manifest.json'
+      ), 'utf8'));
+      expect(snapshot).toMatchObject({
+        sourceTag: manifest.tag,
+        sourceCommit: manifest.commit,
+        aggregateSha256: manifest.appServerProtocol.schemaSha256
+      });
+    }
   });
 
   it('does not download a missing archive in offline mode', () => {
@@ -116,8 +179,8 @@ function createFixture() {
   const protocolHash = sha256(readFileSync(protocolFile));
   writeFileSync(join(protocolRoot, 'metadata.ts'), 'export const source = "fixture";\n');
   writeFileSync(join(protocolRoot, 'protocol-manifest.json'), `${JSON.stringify({
-    sourceTag: 'rust-v0.149.0',
-    sourceCommit: '758ef40f50c1a458425c7cfbf1eb12cbc07af0b0',
+    sourceTag: 'rust-v0.166.0',
+    sourceCommit: '6ff1e1ca3b30fc8b914720681fcf5fe62e95f856',
     aggregateSha256: 'a'.repeat(64),
     files: { 'typescript/v2/TurnStartParams.ts': protocolHash }
   }, null, 2)}\n`);
@@ -125,9 +188,9 @@ function createFixture() {
   writeFileSync(manifestPath, `${JSON.stringify({
     schemaVersion: 1,
     runtime: 'codex',
-    version: '0.149.0',
-    tag: 'rust-v0.149.0',
-    commit: '758ef40f50c1a458425c7cfbf1eb12cbc07af0b0',
+    version: '0.166.0',
+    tag: 'rust-v0.166.0',
+    commit: '6ff1e1ca3b30fc8b914720681fcf5fe62e95f856',
     platform: process.platform,
     arch: process.arch,
     officialAsset: 'https://example.test/codex.zip',
@@ -139,8 +202,8 @@ function createFixture() {
     },
     binary: { relativePath: `bin/${executableName()}`, sha256: sha256(readFileSync(binaryPath)) },
     appServerProtocol: {
-      sourceVersion: 'v0_149_0',
-      relativePath: 'protocol/v0_149_0',
+      sourceVersion: 'v0_166_0',
+      relativePath: 'protocol/v0_166_0',
       schemaSha256: 'a'.repeat(64)
     },
     resources: [{

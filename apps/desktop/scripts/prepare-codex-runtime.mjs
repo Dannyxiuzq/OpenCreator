@@ -39,16 +39,19 @@ export function stageCodexRuntime(input = {}) {
       ?? process.env.OPENCREATOR_CODEX_MANIFEST
       ?? join(rootDir, 'resources', 'codex-runtime', `${platform}-${arch}`, 'manifest.json')
   );
-  const protocolRoot = resolve(
-    input.protocolRoot
-      ?? join(rootDir, 'apps', 'daemon', 'src', 'codex', 'generated', 'v0_149_0')
-  );
   const outputRoot = resolve(
     input.outputRoot
       ?? process.env.OPENCREATOR_CODEX_RUNTIME_OUTPUT
       ?? join(desktopDir, '.pack', 'codex-runtime')
   );
   const manifest = readCodexRuntimeManifest(manifestPath);
+  const protocolRoot = resolve(
+    input.protocolRoot
+      ?? join(
+        rootDir, 'apps', 'daemon', 'src', 'codex', 'generated',
+        protocolSourceVersion(manifest)
+      )
+  );
   if (manifest.platform !== platform || manifest.arch !== arch) {
     throw new Error(
       `Codex Runtime manifest targets ${manifest.platform}/${manifest.arch}, `
@@ -231,6 +234,14 @@ function resolveRuntimePath(root, candidate) {
     throw new Error(`Codex Runtime path escapes its root: ${candidate}`);
   }
   return path;
+}
+
+function protocolSourceVersion(manifest) {
+  const sourceVersion = manifest.appServerProtocol?.sourceVersion;
+  if (typeof sourceVersion !== 'string' || !/^v\d+_\d+_\d+$/.test(sourceVersion)) {
+    throw new Error('Codex Runtime manifest has an invalid app-server protocol source version');
+  }
+  return sourceVersion;
 }
 
 function normalizePlatform(value) {

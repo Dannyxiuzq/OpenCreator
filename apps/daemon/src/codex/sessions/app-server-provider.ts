@@ -215,8 +215,11 @@ async function requestTurns(
     return await client.request<CodexTurnsListResponse>('thread/turns/list', params);
   } catch (error) {
     if (!isThreadNotLoadedError(error)) throw error;
+    // Only reload the thread; the page comes from thread/turns/list. Requesting turns here
+    // would load the whole history, which Codex 0.166.0 deprecates for paginated threads.
     await client.request('thread/resume', {
-      threadId: options.codexThreadId
+      threadId: options.codexThreadId,
+      excludeTurns: true
     });
     return client.request<CodexTurnsListResponse>('thread/turns/list', params);
   }

@@ -30,7 +30,7 @@ if (stateDir !== undefined) {
 }
 
 if (args.length === 1 && args[0] === '--version') {
-  process.stdout.write('codex-cli 0.149.0\n');
+  process.stdout.write('codex-cli 0.166.0\n');
   process.exit(0);
 }
 

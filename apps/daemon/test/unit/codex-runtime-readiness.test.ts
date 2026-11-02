@@ -107,6 +107,32 @@ describe('Codex Runtime Readiness', () => {
     });
     await expect(readiness.logout()).resolves.toEqual({ signedOut: true });
   });
+
+  it('labels every non-ChatGPT account type reported by Codex 0.166.0', async () => {
+    const accounts = [
+      [{ type: 'apiKey' }, 'api_key'],
+      [{ type: 'amazonBedrock', usesCodexManagedCredentials: false }, 'amazon_bedrock'],
+      [{ type: 'gcp' }, 'gcp']
+    ] as const;
+    for (const [account, plan] of accounts) {
+      const readiness = createCodexRuntimeReadiness({
+        client: fakeClient(async method => {
+          if (method === 'account/read') return { account, requiresOpenaiAuth: false };
+          throw new Error(`Unexpected method: ${method}`);
+        }),
+        mode: 'bundled',
+        version: '0.166.0',
+        commit: '6ff1e1ca3b30fc8b914720681fcf5fe62e95f856',
+        binaryPath: '/runtime/bin/codex',
+        codexHome: '/user/.opencreator/runtime/codex',
+        cwd: '/creator'
+      });
+
+      await expect(readiness.readAccount()).resolves.toMatchObject({
+        account: { status: 'ready', accountStatus: 'signed_in', account: { plan } }
+      });
+    }
+  });
 });
 
 function fakeClient(

@@ -1,41 +1,41 @@
 {
   "schemaVersion": 1,
   "runtime": "codex",
-  "version": "0.149.0",
-  "tag": "rust-v0.149.0",
-  "commit": "758ef40f50c1a458425c7cfbf1eb12cbc07af0b0",
+  "version": "0.166.0",
+  "tag": "rust-v0.166.0",
+  "commit": "6ff1e1ca3b30fc8b914720681fcf5fe62e95f856",
   "platform": "win32",
   "arch": "x64",
-  "officialAsset": "https://github.com/openai/codex/releases/download/rust-v0.149.0/codex-x86_64-pc-windows-msvc.exe.zip",
-  "sourcePackage": "npm:@openai/codex@0.149.0-win32-x64",
+  "officialAsset": "https://github.com/openai/codex/releases/download/rust-v0.166.0/codex-x86_64-pc-windows-msvc.exe.zip",
+  "sourcePackage": "npm:@openai/codex@0.166.0-win32-x64",
   "sourceArchive": {
-    "url": "https://registry.npmjs.org/@openai/codex/-/codex-0.149.0-win32-x64.tgz",
-    "integrity": "sha512-qKbwSOOO/fdhQ5MlXE2fts6taPxRPZ/zqeC+eqHD72hLRymV9rFCUbUxOCquognUPRPvS/2/kRCV0UVhoDd3yQ==",
+    "url": "https://registry.npmjs.org/@openai/codex/-/codex-0.166.0-win32-x64.tgz",
+    "integrity": "sha512-NS8Ps5oG5r19pCrMCUXwUqOui6odnUIoBlQkrjCJ+h1k6KiwCzC/+mI9d3nSZCqFoVONPBTmqyq8NYq3YaFGyA==",
     "vendorPath": "package/vendor/x86_64-pc-windows-msvc"
   },
   "binary": {
     "relativePath": "bin/codex.exe",
-    "sha256": "14b7e6b2356e82d1d9275579eaa588757b4e0a501b65dcc19fccdf77bd83dc00"
+    "sha256": "9d563ee4e0441ff9d59d612013e0460ddf8e5709735c2d9f6b98b7ef8ca4eb42"
   },
   "appServerProtocol": {
-    "sourceVersion": "v0_149_0",
-    "relativePath": "protocol/v0_149_0",
-    "schemaSha256": "6670c9dc6595e01472c7b7ec35e604bc132b9fb7fab4894ea78ebee50f36e1ac"
+    "sourceVersion": "v0_166_0",
+    "relativePath": "protocol/v0_166_0",
+    "schemaSha256": "095d2414c3c711d94f67ec85a095ec2be313e5eed855ad7a60cb7adac51c9521"
   },
   "resources": [
     {
       "path": "codex-package.json",
-      "sha256": "6d7001f446eacea5e4c421d0d0d042d9b67512b229f44bee2bd4d39d769b1541",
+      "sha256": "508ab55536232548e41cfc42e9b088ed1eaeaceda0f1af3d6383a53817e2f309",
       "kind": "metadata"
     },
     {
       "path": "bin/codex-code-mode-host.exe",
-      "sha256": "3c6726ab12b8de7c0bccecf4551af686d9dbe1b9fcdaee90bd66f60837943ac2",
+      "sha256": "977c1f01c9efac0bfe1b9032717c95f92e1c965c8441a8dacbfe824c5c79a527",
       "kind": "executable"
     },
     {
       "path": "bin/codex.exe",
-      "sha256": "14b7e6b2356e82d1d9275579eaa588757b4e0a501b65dcc19fccdf77bd83dc00",
+      "sha256": "9d563ee4e0441ff9d59d612013e0460ddf8e5709735c2d9f6b98b7ef8ca4eb42",
       "kind": "executable"
     },
     {
@@ -45,14 +45,14 @@
     },
     {
       "path": "codex-resources/codex-command-runner.exe",
-      "sha256": "8fdae9f1e7ab322b976ce9cf1acd6c19504193a0dcdb9f0429e2f7ec20c128d4",
+      "sha256": "5e68e3f5b4640af55db2873a0d0dc038907145708f9e735870d9279a8074c2df",
       "kind": "executable"
     },
     {
       "path": "codex-resources/codex-windows-sandbox-setup.exe",
-      "sha256": "17c9d3e69ca54a9ddcc6b7cbba6922b1310455f66b9d9f88706f80d1553ab2e2",
+      "sha256": "3995c4f57199eb8023a0f3a585f6e9fdc4d5174c22a51837aaeb15beb52954f0",
       "kind": "executable"
     }
   ],
-  "builtAt": "2026-08-21T00:00:00.000Z"
+  "builtAt": "2026-11-02T00:00:00.000Z"
 }

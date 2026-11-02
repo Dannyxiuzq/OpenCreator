@@ -129,7 +129,10 @@ assertSize('Daemon resources', daemonDir, 250 * 1024 * 1024);
 const creatorRuntimeLimitMiB = targetPlatform === 'win32' ? 704
   : targetPlatform === 'darwin' && targetArch === 'x64' ? 640 : 512;
 assertSize('Creator Runtime', creatorRuntimeDir, creatorRuntimeLimitMiB * 1024 * 1024);
-assertSize('Codex Runtime', codexRuntimeDir, 450 * 1024 * 1024);
+// Codex 0.166.0 stages 461 MiB on Windows x64 (codex.exe alone is 355 MiB);
+// macOS arm64/x64 stage 326/350 MiB and Linux x64 385 MiB.
+const codexRuntimeLimitMiB = targetPlatform === 'win32' ? 512 : 450;
+assertSize('Codex Runtime', codexRuntimeDir, codexRuntimeLimitMiB * 1024 * 1024);
 assertSize('Stickman assets', join(daemonDir, 'runtime', 'stickman-assets'), 16 * 1024 * 1024);
 assertSize('Desktop package', packageRoot, 1600 * 1024 * 1024);
 await assertFuseConfiguration();

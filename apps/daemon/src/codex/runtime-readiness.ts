@@ -23,7 +23,7 @@ import type {
   ModelListResponse,
   SkillsListParams,
   SkillsListResponse
-} from './generated/v0_149_0/index.js';
+} from './generated/v0_166_0/index.js';
 import {
   CodexAppServerResponseError,
   type CodexAppServerRequestClient
@@ -239,8 +239,21 @@ function mapAccount(response: GetAccountResponse): CodexAccountState {
   return {
     ...component('ready'),
     accountStatus: 'signed_in',
-    account: { plan: response.account.type === 'apiKey' ? 'api_key' : 'amazon_bedrock' }
+    account: { plan: nonChatgptAccountPlan(response.account) }
   };
+}
+
+function nonChatgptAccountPlan(
+  account: Exclude<NonNullable<GetAccountResponse['account']>, { type: 'chatgpt' }>
+): string {
+  switch (account.type) {
+    case 'apiKey':
+      return 'api_key';
+    case 'amazonBedrock':
+      return 'amazon_bedrock';
+    case 'gcp':
+      return 'gcp';
+  }
 }
 
 function requestFailure(error: unknown, area: string): {
