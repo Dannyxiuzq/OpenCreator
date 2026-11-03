@@ -3,6 +3,7 @@
 > 日期：2026-11-02
 > 分支：`claude/funny-gauss-fclzeh`（相对基线 `31c350b` 的三个代码提交，加本文档提交）
 > 执行环境：Claude Code 云端 Linux 容器（x86_64），Node 22.23.4，pnpm 9.15.0，Go 1.24.7；没有 CJK 字体；没有 Mac；网络策略阻断 `chatgpt.com`、Electron headers 和 Chromium headless shell 的下载源。
+> Mac 回填：2026-11-02 至 2026-11-03，macOS（Darwin 27.2.0，Apple Silicon），Node 26.12.0，pnpm 9.15.0，真实 ChatGPT 账号（plan prolite）。回填结果见第 4、5 节；本地证据目录 `.tmp/`（已被 git 忽略）。
 
 本报告只列出**实际执行过**的检查。没有执行的项目一律标为“未验证”，并写明原因。
 
@@ -10,18 +11,18 @@
 
 | 范围 | 状态 | 说明 |
 | --- | --- | --- |
-| 诊断：版本对照（离线、真实官方二进制） | 通过 | 第 3.6 节；真实账号对照 **未验证** |
+| 诊断：版本对照（离线、真实官方二进制） | 通过 | 第 3.6 节；真实账号对照已在 Mac 执行，结论 `VERSION_GATED`（第 5 节） |
 | 来源与完整性（npm、GitHub 双渠道、manifest、篡改检测） | 通过 | 第 3.1 节 |
 | 协议快照生成（可复现、确定性） | 通过 | 第 3.1 节 |
 | 类型检查与编译（daemon、desktop） | 通过 | 第 3.2 节 |
 | 定向测试 | 通过 | 第 3.3 节 |
 | 真实二进制门禁（网关协议 16 项） | 通过（发现并修复 1 个夹具问题） | 第 3.4 节 |
-| 源码运行（真实 0.166.0 + OpenCreator 服务端代码 + 离线 mock） | 9/9 通过 | 第 3.7 节；真实模型 **未验证** |
+| 源码运行（真实 0.166.0 + OpenCreator 服务端代码 + 离线 mock） | 9/9 通过 | 第 3.7 节；真实模型在 Mac 上同样 9/9 通过（第 5 节） |
 | 历史读取与回滚兼容（两版真实二进制，离线 mock） | 通过 | 第 3.9 节 |
-| Web 端开发模式（MAC_RUNBOOK 3.1 的环境，经 Web 开发服务器调用 API，离线 mock） | 通过 | 第 3.10 节；浏览器界面 **未验证** |
+| Web 端开发模式（MAC_RUNBOOK 3.1 的环境，经 Web 开发服务器调用 API，离线 mock） | 通过 | 第 3.10 节；浏览器界面：Mac 上以真实账号经浏览器验证通过（第 5 节“Web 端同流程”行） |
 | 全量回归（daemon、desktop 单元与集成） | 通过；1 个与本次无关的环境失败 | 第 3.8 节 |
-| macOS 独立测试包构建、`verify-package`、打包 E2E、Web 端界面检查 | **未验证** | 只能在 Mac 上执行，见第 4 节 |
-| 真实模型的响应、流式、工具与审批、取消、恢复、短字幕翻译 | **未验证** | 需要真实账号，见第 5 节 |
+| macOS 独立测试包构建、`verify-package`、打包 E2E、Web 端界面检查 | 通过（打包 E2E 24 个用例：21 通过、2 个平台跳过、1 个既有过时用例已定位原因） | 第 4 节与第 5 节 |
+| 真实模型的响应、流式、工具与审批、取消、恢复、短字幕翻译 | 通过，附 3 项观察（对话界面整段显示为既有设计；恢复时收到 `deprecationNotice`；字幕 13/12 句为模型分段） | 第 5 节 |
 
 ## 2. 验证分级
 
@@ -179,7 +180,9 @@ mock 记录：所有模型请求均为 `version=0.166.0`、`originator=opencreat
 
 没有做的：浏览器中的界面操作，需要真实账号，见第 5 节。
 
-## 4. 未验证：需要在 Mac 上执行的构建与打包门禁
+## 4. 需要在 Mac 上执行的构建与打包门禁
+
+> Mac 回填（2026-11-02/03）：前六项已在 Mac 上执行。独立测试包构建成功，`verify-package` 通过；bundle id 为 `com.opencreator.desktop.isolated.codex-0166`，内置 Codex 为 `codex-cli 0.166.0`（commit `6ff1e1ca…`），`codex` 保留 OpenAI Developer ID 签名，独立 userData 与数据根生效且未注册深链、无更新；打包 E2E 与 Web 端界面检查的结果见第 5 节。Linux、Windows 仍未验证。
 
 | 项目 | 原因 | 怎么验证 |
 | --- | --- | --- |
@@ -192,21 +195,23 @@ mock 记录：所有模型请求均为 `version=0.166.0`、`originator=opencreat
 | Linux 打包 | Linux 不在官方发布矩阵中；容器网络阻断 Electron headers 和 Chromium headless shell 的下载 | 不在本次范围 |
 | Windows 打包，以及 Codex 512 MiB 和整包 1600 MiB 门槛的余量 | 无 Windows 环境 | Windows 发布前执行 |
 
-## 5. 未验证：需要真实 ChatGPT 账号的验收（请在 Mac 上回填）
+## 5. 需要真实 ChatGPT 账号的验收（Mac 回填）
+
+界面项目通过 Playwright 以 CDP 驱动隔离测试包 `~/OpenCreator-Isolated/OpenCreator Codex 0166.app`（profile `codex-0166`，数据根 `~/.opencreator-isolated/codex-0166`，`~/.codex` 只读同步）执行，界面语言设为简体中文、默认权限设为“请求批准”；Web 端用同一脚本经 `pnpm web:dev`（MAC_RUNBOOK 3.1 环境，数据根 `~/.opencreator-isolated/codex-0166-web`）执行。脚本与截图在 `.tmp/codex-acceptance/`。
 
 | 项目 | 命令或步骤 | 状态 | 实际结果 |
 | --- | --- | --- | --- |
-| 同账号对照，结论应为 `VERSION_GATED` | `node --import tsx scripts/codex-runtime-ab/codex-ab.mjs --from-codex-home ~/.codex` | 未验证 | |
-| 源码运行 9 项（真实模型） | `node --import tsx scripts/codex-runtime-ab/source-run-check.mjs --from-codex-home ~/.codex` | 未验证 | |
-| Web 端同流程（第 5 节第 1 至 5 项） | MAC_RUNBOOK.md 第 3.1 节 | 未验证 | |
-| 打包 App 冒烟 E2E | MAC_RUNBOOK.md 第 4.1 节 | 未验证 | |
-| 真实模型响应（gpt-6.1-terra） | MAC_RUNBOOK.md 第 5 节第 1 项 | 未验证 | |
-| 流式输出 | 第 5 节第 2 项 | 未验证 | |
-| 工具与审批（gpt-6.1-terra 的 code mode 工具） | 第 5 节第 3 项 | 未验证 | |
-| 取消 | 第 5 节第 4 项 | 未验证 | |
-| 恢复（App 重启后续聊；Creator 刷新后无重复 Activity） | 第 5 节第 5 项 | 未验证 | |
-| 短字幕翻译（句数和时间轴完整，无 `partial_answer` 截断，无积分提示） | 第 5 节第 6 项 | 未验证 | |
-| 正式数据未变 | MAC_RUNBOOK.md 第 6 节 | 未验证 | |
+| 同账号对照，结论应为 `VERSION_GATED` | `node --import tsx scripts/codex-runtime-ab/codex-ab.mjs --from-codex-home ~/.codex` | 通过（`VERSION_GATED`） | 2026-11-02 以真实 `~/.codex` 运行：0.149.0 请求 gpt-6.1-terra 返回 model_not_found，0.166.0 正常回复 `OK`；源 home 未修改。报告：`.tmp/codex-ab/run-2026-11-02T14-34-45-748Z/report.json` |
+| 源码运行 9 项（真实模型） | `node --import tsx scripts/codex-runtime-ab/source-run-check.mjs --from-codex-home ~/.codex` | 通过（9/9） | 真实账号：审批往返实际执行了 `touch approved.txt`；取消耗时 203 ms；字幕翻译时间轴保留。报告：`.tmp/codex-source-run/run-2026-11-02T14-40-45-895Z/report.json`。`thread-history-probe.mjs`：`RESULT: PASS` |
+| Web 端同流程（第 5 节第 1 至 5 项） | MAC_RUNBOOK.md 第 3.1 节 | 通过（9 项脚本判定 8 通过；第 3a 项文件实际已创建） | `pnpm web:dev` + Chrome headless 经 CDP 操作，数据根 `~/.opencreator-isolated/codex-0166-web` 每轮重置：readiness ready、版本 0.166.0、ChatGPT 已登录（prolite）；设置页“诊断”显示 0.166.0；`Reply with exactly: OK` 回复 `OK`，run succeeded；流式：SSE 201 条 token 级事件、跨度 2.4 s，对话界面完成时整段显示（与打包 App 相同，见“流式输出”行）；审批：点击“允许一次”后 `approved.txt` 在默认项目目录创建（mtime 15:55:27，在该 run 的时间窗内；脚本误检查了上一级目录而判为失败），点击“拒绝”后文件不存在；取消：`canceled`/`user_canceled`，461 ms，无残余进程；刷新页面后同一会话续聊，历史 2/2 完整、回复 `OK`；Creator 面板刷新后消息 2 条/Activity 1 条不重复 |
+| 打包 App 冒烟 E2E | MAC_RUNBOOK.md 第 4.1 节 | 通过（24 个用例：21 通过、2 跳过、1 个既有过时用例） | 隔离 profile 包。首轮因 serial 模式在 2 个失败后停止（20 个未运行）：`官方配音试听加载公开样本且不触发付费合成` 单独重跑通过（负载下 15 s 可见性超时）；`实际 Desktop 包创建并重启恢复 Creator Job，且使用内嵌 Runtime` 稳定失败，原因是它按中文首次启动界面点击“设置”，而主干（e4b971b8 起）首次启动默认英文（`apps/web/src/i18n/language.ts` 的 `defaultLanguagePreference = 'en-US'`），该 spec 写入的 config 又没有 `[ui] language`；临时在 spec 的 `writeOpenCreatorConfig` 加入 `[ui] language = "zh-CN"` 后该用例 8.1 s 通过（改动已还原），与 0.166.0 无关。排除它后全量重跑 23 个用例：21 通过、2 跳过（Windows 专用登录；需真实 Chrome 登录态的 YouTube 用例），2.4 分钟 |
+| 真实模型响应（gpt-6.1-terra） | MAC_RUNBOOK.md 第 5 节第 1 项 | 通过 | `Reply with exactly: OK` → run succeeded，界面回复 `OK`；Codex 会话 rollout 记录的模型为 gpt-6.1-terra（隔离 Runtime Home 中全部 43 条记录均为 gpt-6.1-terra）；设置页“诊断”显示 0.166.0；ChatGPT 已登录（prolite）；选择器列出 gpt-6.1-sol、gpt-6-astra、gpt-6.1-terra、gpt-6-sol、gpt-6-luna。观察：输入框的模型按钮显示 `GPT-6.1-Sol · 默认`，而实际请求使用 config 中的 gpt-6.1-terra；该标签取自选择器的默认项（`apps/web/src/features/runs/Composer.tsx` 的 `resolveSelectedModel`，本次未改动），与运行模型无关 |
+| 流式输出 | 第 5 节第 2 项 | 通过（Creator 面板逐步显示；对话时间线整段显示为既有设计） | 用 MutationObserver 记录界面文字长度。Creator 面板：提示“写三段关于字幕历史的短文”，助手文字随时间增长 22 步、跨度 12.1 s，最终 336 字符（daemon 经 `item/agentMessage/delta` 推送，`apps/daemon/src/creator/agent/event-normalizer.ts`，与基线相同）。对话时间线：同一提示 9.4 s 完成，界面先显示“正在思考”，完成时一次显示全文（302 字符）；`/runs/:id/events` 的 SSE 中有 211 条 token 级事件（daemon 记为 unknown_event，首轮验收为 172 条、跨度 2.1 s），但 Web 端对话时间线没有 delta 消费逻辑（基线 31c350b 亦无），所以对话界面不逐字显示是既有行为，不是本次升级引入。MAC_RUNBOOK 第 5 节第 2 项“文字逐步出现”在 Creator 面板路径成立 |
+| 工具与审批（gpt-6.1-terra 的 code mode 工具） | 第 5 节第 3 项 | 通过 | 权限“请求批准”（workspace-write）。批准：审批类型 command_execution，命令 `/bin/zsh -lc 'touch approved.txt'`，cwd 为默认项目目录，点击“允许一次”后文件出现，run succeeded。拒绝：命令 `/bin/zsh -lc 'touch rejected.txt'`，点击“拒绝”后文件不存在，模型回复说明命令未执行 |
+| 取消 | 第 5 节第 4 项 | 通过 | 长任务输出中点击“停止任务”：run `canceled`，`terminationReason: user_canceled`，点击到状态变更 24 ms，界面显示已取消；取消前后内置 codex 进程数不变（4 → 4），无新增残余进程 |
+| 恢复（App 重启后续聊；Creator 刷新后无重复 Activity） | 第 5 节第 5 项 | 通过（有观察） | 完整退出测试包（退出码 0）后重开并打开同一会话：历史 2 条用户消息、2 条助手消息完整，追问回复 `OK`。Creator 模板任务：面板 2 条消息、1 条 Activity，刷新后仍为 2/1，agent-timeline 2 条、id 唯一、无重复文本。观察：重启后续聊的 run 收到 Codex 0.166.0 的 `deprecationNotice`（“Full-history hydration is deprecated for paginated threads; omit `includeTurns`…”），来源是 daemon 恢复线程前的 `thread/read { includeTurns: true }`（`apps/daemon/src/codex/app-server-host-2026-07-28.ts`）；daemon 记为 unknown_event，结果不受影响 |
+| 短字幕翻译（句数和时间轴完整，无 `partial_answer` 截断，无积分提示） | 第 5 节第 6 项 | 通过（有观察） | 12 句英文 SRT → 简体中文：两轮 job 均 completed（31.8 s、30.6 s），无 issues、无积分提示、无网关调用，全部句子已翻译，无 `partial_answer` 截断。观察：两轮输出都是 13 条字幕，各有一条原句被拆成两条（第一轮第 9 句，第二轮第 4 句），拆分点按原文字符比例落在原句时间段内，其余时间戳与原文一致，文本完整。机制是 Krillin 配对翻译：模型按 segments 返回译文，`BatchTranslateSrtBlocks` 为每个 segment 输出一条字幕（`runtime/krillinai/internal/service/paired_translation.go`），拆分位置由模型决定，两轮不同。0.149.0 无法用 gpt-6.1-terra 做同账号对照，不能判断是否与升级有关 |
+| 正式数据未变 | MAC_RUNBOOK.md 第 6 节 | 通过（变化均可归因于用户自己运行的正式 App 与官方 Codex） | 2026-11-03 15:5x 与验收前基线 `~/opencreator-baseline-before.txt` 对照：`~/.codex/config.toml`、`auth.json`、`tmp/`、`skills/` 的 mtime 与大小完全不变；变化只有 `~/.codex/*.sqlite*`（官方 ChatGPT App 的 Codex app-server daemon 0.166.0 全程运行）、`~/.opencreator/runtime/codex/logs_2.sqlite*`（正式 OpenCreator 3.2.9 自带 Codex 的日志，正式 App 在测试期间一直运行）以及 `~/.opencreator/config.toml` 与 `data/app.sqlite` 的 mtime（大小不变，由正式 App 在 15:53:09 退出时写入，其日志记为正常 quitting；当时没有任何验收进程在运行）。测试包、源码运行、Web 开发模式都只写独立数据根 `~/.opencreator-isolated/{codex-0166,codex-0166-web}` 和系统临时目录。要得到无变化的 diff，需按 MAC_RUNBOOK 第 6 节先退出正式 OpenCreator 与官方 Codex 再执行 |
 
 ### 5.1 为什么不用仓库现有的真实 Codex smoke 作为验收
 
@@ -217,7 +222,7 @@ mock 记录：所有模型请求均为 `version=0.166.0`、`originator=opencreat
 ## 6. 残余风险
 
 1. 根因判断来自目录元数据、客户端源码和离线对照。服务端到底依据哪个信号门控（`client_version`、`version` 头、UA 或 originator），以及该账号或工作区是否有权限，只有真实对照能确认。如果对照结论是 `ACCOUNT_OR_MODEL_AVAILABILITY`，本次升级不能解决问题。
-2. 0.149.0 → 0.166.0 跨度为 3256 个提交，0.166.0 发布只有 4 天。本报告覆盖了 OpenCreator 实际使用的协议面和路径，但真实模型在 code mode 下的工具行为、`partial_answer` 拆分、`deprecationNotice` 的出现频率，以及 0.166.0 新默认开启的特性（如 `instant_interrupt`、`system_proxy_fallback`、`plugin_discovery_prefetch`，见 DIAGNOSIS.md 第 4 节）在真实环境中的表现，都尚未验证。
-3. 模型选择器沿用“只保留最新两个 GPT 版本族”的既有规则，升级后 gpt-5.6 和 gpt-5.5 不再出现在选择器里（按内置目录模拟，远端目录未验证）。
+2. 0.149.0 → 0.166.0 跨度为 3256 个提交，0.166.0 发布只有 4 天。本报告覆盖了 OpenCreator 实际使用的协议面和路径，但真实模型在 code mode 下的工具行为、`partial_answer` 拆分、`deprecationNotice` 的出现频率，以及 0.166.0 新默认开启的特性（如 `instant_interrupt`、`system_proxy_fallback`、`plugin_discovery_prefetch`，见 DIAGNOSIS.md 第 4 节）在真实环境中的表现，都尚未验证。Mac 验收中观察到：重启后恢复线程的 run 会收到一次 `deprecationNotice`（daemon 的 `thread/read { includeTurns: true }`，第 5 节），结果不受影响；字幕翻译未出现 `partial_answer`。
+3. 模型选择器沿用“只保留最新两个 GPT 版本族”的既有规则，升级后 gpt-5.6 和 gpt-5.5 不再出现在选择器里。真实账号验证：选择器为 gpt-6.1-sol、gpt-6-astra、gpt-6.1-terra、gpt-6-sol、gpt-6-luna（第 5 节）。
 4. 网关路径下，内置目录外的模型使用 fallback 元数据，没有 `apply_patch`。0.166.0 移除了 gpt-5.2、gpt-5.4、gpt-5.4-mini。
 5. 回滚到 0.149.0 时，0.166.0 原地迁移过的状态库能打开。离线探针中，0.149.0 能列出、读取并续聊 0.166.0 新建的 paginated 线程（第 3.9 节），但只覆盖简单文本对话。正式升级前仍请先备份（ROLLBACK.md 第 3 节）。
