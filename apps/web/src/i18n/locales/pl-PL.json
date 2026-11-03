@@ -137,6 +137,7 @@
   "Allow OpenCreator to execute this command?": "Zezwolić OpenCreator na wykonanie tego polecenia?",
   "Allow OpenCreator to modify project files?": "Zezwolić OpenCreator na modyfikowanie plików projektu?",
   "Allow OpenCreator to obtain this permission?": "Zezwolić OpenCreator na uzyskanie tego pozwolenia?",
+  "Allow OpenCreator to send input to the running command?": "Zezwolić OpenCreator na wysłanie danych wejściowych do uruchomionego polecenia?",
   "Allow local file access and local operations": "Zezwalaj na lokalny dostęp do plików i lokalne operacje",
   "Alloy": "Stop",
   "Already queued": "Już w kolejce",

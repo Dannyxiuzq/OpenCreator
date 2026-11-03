@@ -944,6 +944,7 @@ function formatApprovalResolution(approval: Extract<TimelineItem, { kind: 'appro
     return host ? `${prefix}访问 ${host}` : `${prefix}获取权限`;
   }
   if (approval.kind === 'file_change') return `${prefix}修改文件`;
+  if (approval.details.approvalKind === 'writeStdin') return `${prefix}向运行中的命令输入`;
   return `${prefix}执行命令`;
 }
 

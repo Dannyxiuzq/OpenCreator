@@ -123,6 +123,7 @@
   "Allow OpenCreator to execute this command?": "இந்தக் கட்டளையை இயக்க OpenCreator ஐ அனுமதிக்கவா?",
   "Allow OpenCreator to modify project files?": "திட்டக் கோப்புகளை மாற்ற OpenCreator ஐ அனுமதிக்கவா?",
   "Allow OpenCreator to obtain this permission?": "இந்த அனுமதியைப் பெற OpenCreator ஐ அனுமதிக்கவா?",
+  "Allow OpenCreator to send input to the running command?": "இயங்கிக் கொண்டிருக்கும் கட்டளைக்கு உள்ளீடு அனுப்ப OpenCreator-ஐ அனுமதிக்கவா?",
   "Allow local file access and local operations": "உள்ளூர் கோப்பு அணுகல் மற்றும் உள்ளூர் செயல்பாடுகளை அனுமதிக்கவும்",
   "Alloy": "அலாய்",
   "Already queued": "ஏற்கனவே வரிசையில் நிற்கிறது",

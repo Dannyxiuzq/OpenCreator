@@ -137,6 +137,7 @@
   "Allow OpenCreator to execute this command?": "OpenCreator によるこのコマンドの実行を許可しますか?",
   "Allow OpenCreator to modify project files?": "OpenCreator によるプロジェクト ファイルの変更を許可しますか?",
   "Allow OpenCreator to obtain this permission?": "OpenCreator がこの権限を取得できるようにしますか?",
+  "Allow OpenCreator to send input to the running command?": "実行中のコマンドへの入力を OpenCreator に許可しますか？",
   "Allow local file access and local operations": "ローカル ファイル アクセスとローカル操作を許可する",
   "Alloy": "合金",
   "Already queued": "すでにキューに入れられています",

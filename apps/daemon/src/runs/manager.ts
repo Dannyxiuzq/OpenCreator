@@ -2066,12 +2066,19 @@ function buildApprovalRequest(input: {
     : input.request.method === 'item/fileChange/requestApproval'
       ? 'file_change' as const
       : 'permissions' as const;
+  // Codex >= 0.166.0 reuses item/commandExecution/requestApproval for input
+  // written to an already running command (`kind: "writeStdin"`). Label it as
+  // such so the user does not mistake it for approving a new command.
+  const approvalKind = kind === 'command_execution' ? optionalString(params.kind) : undefined;
+  const isStdinApproval = approvalKind === 'writeStdin';
   const title = isScheduleCreate
     ? 'Allow scheduled task creation'
     : isMcpElicitation
       ? 'Allow MCP tool call'
       : kind === 'command_execution'
-        ? host === undefined ? 'Allow command execution' : 'Allow network access'
+        ? isStdinApproval
+          ? 'Allow input to running command'
+          : host === undefined ? 'Allow command execution' : 'Allow network access'
         : kind === 'file_change'
           ? 'Allow file changes'
           : 'Allow additional permissions';
@@ -2079,6 +2086,7 @@ function buildApprovalRequest(input: {
     ? `${protocol ?? 'network'}://${host}${port === undefined ? '' : `:${port}`}`
     : scheduleName ?? toolName ?? serverName ?? command ?? grantRoot ?? reason ?? title;
   const details = redactApprovalDetails({
+    ...(approvalKind === undefined || approvalKind === 'command' ? {} : { approvalKind }),
     ...(reason === undefined ? {} : { reason }),
     ...(command === undefined ? {} : { command }),
     ...(cwd === undefined ? {} : { cwd }),

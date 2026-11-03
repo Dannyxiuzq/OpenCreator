@@ -16,7 +16,7 @@ export function ApprovalPanel(props: {
     props.approval.details,
     props.approval.summary
   );
-  const approvalCopy = getApprovalCopy(l, props.approval.kind);
+  const approvalCopy = getApprovalCopy(l, props.approval.kind, props.approval.details);
   const ApprovalIcon = approvalCopy.icon;
   return (
     <section
@@ -77,13 +77,20 @@ export function ApprovalPanel(props: {
   );
 }
 
-function getApprovalCopy(l: LocalizeCopy, kind: RuntimeApproval['kind']): {
+function getApprovalCopy(
+  l: LocalizeCopy,
+  kind: RuntimeApproval['kind'],
+  details: Record<string, unknown>
+): {
   source: string;
   question: string;
   icon: typeof SquareTerminal;
 } {
   switch (kind) {
     case 'command_execution':
+      if (details.approvalKind === 'writeStdin') {
+        return { source: l("终端", "terminal"), question: l("允许 OpenCreator 向正在运行的命令输入内容？", "Allow OpenCreator to send input to the running command?"), icon: SquareTerminal };
+      }
       return { source: l("终端", "terminal"), question: l("允许 OpenCreator 执行这条命令？", "Allow OpenCreator to execute this command?"), icon: SquareTerminal };
     case 'file_change':
       return { source: l("文件", "Files"), question: l("允许 OpenCreator 修改项目文件？", "Allow OpenCreator to modify project files?"), icon: FilePenLine };

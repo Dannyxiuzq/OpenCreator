@@ -124,6 +124,7 @@
   "Allow OpenCreator to execute this command?": "Benarkan OpenCreator untuk melaksanakan arahan ini?",
   "Allow OpenCreator to modify project files?": "Benarkan OpenCreator mengubah suai fail projek?",
   "Allow OpenCreator to obtain this permission?": "Benarkan OpenCreator mendapatkan kebenaran ini?",
+  "Allow OpenCreator to send input to the running command?": "Benarkan OpenCreator menghantar input kepada perintah yang sedang berjalan?",
   "Allow local file access and local operations": "Benarkan akses fail tempatan dan operasi setempat",
   "Alloy": "Aloi",
   "Already queued": "Sudah beratur",

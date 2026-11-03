@@ -137,6 +137,7 @@
   "Allow OpenCreator to execute this command?": "อนุญาตให้ OpenCreator ดำเนินการคำสั่งนี้หรือไม่",
   "Allow OpenCreator to modify project files?": "อนุญาตให้ OpenCreator แก้ไขไฟล์โครงการหรือไม่",
   "Allow OpenCreator to obtain this permission?": "อนุญาตให้ OpenCreator ขอรับสิทธิ์นี้หรือไม่",
+  "Allow OpenCreator to send input to the running command?": "อนุญาตให้ OpenCreator ส่งข้อมูลป้อนเข้าไปยังคำสั่งที่กำลังทำงานอยู่หรือไม่",
   "Allow local file access and local operations": "อนุญาตการเข้าถึงไฟล์ในเครื่องและการดำเนินการในเครื่อง",
   "Alloy": "แม็ก",
   "Already queued": "เข้าคิวแล้ว",

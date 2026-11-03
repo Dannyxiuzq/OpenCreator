@@ -137,6 +137,7 @@
   "Allow OpenCreator to execute this command?": "Дозволити OpenCreator виконати цю команду?",
   "Allow OpenCreator to modify project files?": "Дозволити OpenCreator змінювати файли проекту?",
   "Allow OpenCreator to obtain this permission?": "Дозволити OpenCreator отримати цей дозвіл?",
+  "Allow OpenCreator to send input to the running command?": "Дозволити OpenCreator надіслати введення до запущеної команди?",
   "Allow local file access and local operations": "Дозволити локальний доступ до файлів і локальні операції",
   "Alloy": "сплав",
   "Already queued": "Вже в черзі",

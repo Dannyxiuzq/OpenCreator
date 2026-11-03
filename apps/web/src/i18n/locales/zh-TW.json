@@ -137,6 +137,7 @@
   "Allow OpenCreator to execute this command?": "允許 OpenCreator 執行此指令？",
   "Allow OpenCreator to modify project files?": "允許 OpenCreator 修改專案檔案？",
   "Allow OpenCreator to obtain this permission?": "允許 OpenCreator 取得此權限？",
+  "Allow OpenCreator to send input to the running command?": "允許 OpenCreator 向正在執行的命令輸入內容？",
   "Allow local file access and local operations": "允許存取本機檔案及執行本機操作",
   "Alloy": "Alloy",
   "Already queued": "已在佇列中",

@@ -137,6 +137,7 @@
   "Allow OpenCreator to execute this command?": "Payagan ang OpenCreator na isagawa ang utos na ito?",
   "Allow OpenCreator to modify project files?": "Payagan ang OpenCreator na baguhin ang mga file ng proyekto?",
   "Allow OpenCreator to obtain this permission?": "Payagan ang OpenCreator na makuha ang pahintulot na ito?",
+  "Allow OpenCreator to send input to the running command?": "Payagan ang OpenCreator na magpadala ng input sa tumatakbong command?",
   "Allow local file access and local operations": "Payagan ang pag-access ng lokal na file at mga lokal na operasyon",
   "Alloy": "Haluang metal",
   "Already queued": "Nakapila na",

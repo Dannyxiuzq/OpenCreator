@@ -123,6 +123,7 @@
   "Allow OpenCreator to execute this command?": "Povoliť OpenCreator vykonať tento príkaz?",
   "Allow OpenCreator to modify project files?": "Povoliť OpenCreator upravovať súbory projektu?",
   "Allow OpenCreator to obtain this permission?": "Povoliť OpenCreator získať toto povolenie?",
+  "Allow OpenCreator to send input to the running command?": "Povoliť OpenCreatoru odoslať vstup bežiacemu príkazu?",
   "Allow local file access and local operations": "Povoliť prístup k lokálnym súborom a miestne operácie",
   "Alloy": "Zliatina",
   "Already queued": "Už v poradí",

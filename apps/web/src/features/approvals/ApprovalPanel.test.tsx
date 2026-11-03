@@ -47,6 +47,26 @@ describe('ApprovalPanel', () => {
     expect(onReject).toHaveBeenCalledWith('approval_1');
   });
 
+  it('asks about terminal input instead of command execution for a stdin approval', () => {
+    render(
+      <ApprovalPanel
+        approval={{
+          ...approval,
+          title: 'Allow input to running command',
+          summary: 'python3 deploy.py',
+          details: { command: 'python3 deploy.py', cwd: '/workspace', approvalKind: 'writeStdin' }
+        }}
+        onApprove={vi.fn()}
+        onReject={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('终端')).toBeInTheDocument();
+    expect(screen.getByText('允许 OpenCreator 向正在运行的命令输入内容？')).toBeInTheDocument();
+    expect(screen.queryByText('允许 OpenCreator 执行这条命令？')).not.toBeInTheDocument();
+    expect(screen.getByText('python3 deploy.py')).toBeInTheDocument();
+  });
+
   it('renders a terminal decision without action buttons', () => {
     render(
       <ApprovalPanel

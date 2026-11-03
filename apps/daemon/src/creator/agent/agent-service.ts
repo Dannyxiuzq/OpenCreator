@@ -507,7 +507,7 @@ export function createCreatorAgentService(input: {
       processGeneration: event.processGeneration,
       kind: approvalKind(event.request.method),
       status: 'pending',
-      title: approvalTitle(event.request.method),
+      title: approvalTitle(event.request.method, params),
       summary: typeof params.reason === 'string' ? params.reason : 'Creator Agent requested an operation',
       details: JSON.parse(JSON.stringify(params)),
       requestedAt,
@@ -764,8 +764,16 @@ function approvalKind(method: AppServerRequest['method']): CreatorAgentApproval[
   return 'tool_call';
 }
 
-function approvalTitle(method: AppServerRequest['method']): string {
-  if (method === 'item/commandExecution/requestApproval') return 'Approve command execution';
+function approvalTitle(
+  method: AppServerRequest['method'],
+  params: AppServerRequest['params']
+): string {
+  if (method === 'item/commandExecution/requestApproval') {
+    // Codex >= 0.166.0: `kind: "writeStdin"` means input to a running command.
+    return params.kind === 'writeStdin'
+      ? 'Approve input to running command'
+      : 'Approve command execution';
+  }
   if (method === 'item/fileChange/requestApproval') return 'Approve file changes';
   if (method === 'item/permissions/requestApproval') return 'Approve permission request';
   return 'Approve tool call';

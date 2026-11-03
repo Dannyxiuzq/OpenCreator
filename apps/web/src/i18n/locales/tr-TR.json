@@ -137,6 +137,7 @@
   "Allow OpenCreator to execute this command?": "OpenCreator'ın bu komutu çalıştırmasına izin verilsin mi?",
   "Allow OpenCreator to modify project files?": "OpenCreator'ın proje dosyalarını değiştirmesine izin verilsin mi?",
   "Allow OpenCreator to obtain this permission?": "OpenCreator'ın bu izni almasına izin verilsin mi?",
+  "Allow OpenCreator to send input to the running command?": "OpenCreator'ın çalışan komuta girdi göndermesine izin verilsin mi?",
   "Allow local file access and local operations": "Yerel dosya erişimine ve yerel işlemlere izin ver",
   "Alloy": "Alloy",
   "Already queued": "Zaten kuyrukta",

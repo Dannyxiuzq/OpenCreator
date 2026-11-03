@@ -124,6 +124,7 @@
   "Allow OpenCreator to execute this command?": "Να επιτρέπεται στο OpenCreator να εκτελέσει αυτήν την εντολή;",
   "Allow OpenCreator to modify project files?": "Να επιτρέπεται στο OpenCreator να τροποποιεί τα αρχεία έργου;",
   "Allow OpenCreator to obtain this permission?": "Να επιτρέπεται στο OpenCreator να αποκτήσει αυτήν την άδεια;",
+  "Allow OpenCreator to send input to the running command?": "Να επιτρέπεται στο OpenCreator να στείλει είσοδο στην εντολή που εκτελείται;",
   "Allow local file access and local operations": "Να επιτρέπεται η πρόσβαση σε τοπικό αρχείο και οι τοπικές λειτουργίες",
   "Alloy": "Κράμα",
   "Already queued": "Ήδη στην ουρά",

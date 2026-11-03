@@ -124,6 +124,7 @@
   "Allow OpenCreator to execute this command?": "Povolit OpenCreator provést tento příkaz?",
   "Allow OpenCreator to modify project files?": "Povolit OpenCreator upravovat soubory projektu?",
   "Allow OpenCreator to obtain this permission?": "Povolit OpenCreator získat toto oprávnění?",
+  "Allow OpenCreator to send input to the running command?": "Povolit OpenCreatoru odeslat vstup běžícímu příkazu?",
   "Allow local file access and local operations": "Povolit přístup k místním souborům a místní operace",
   "Alloy": "Slitina",
   "Already queued": "Již ve frontě",

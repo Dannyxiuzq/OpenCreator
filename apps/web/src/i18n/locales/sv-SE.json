@@ -137,6 +137,7 @@
   "Allow OpenCreator to execute this command?": "Tillåta OpenCreator att köra detta kommando?",
   "Allow OpenCreator to modify project files?": "Tillåta OpenCreator att ändra projektfiler?",
   "Allow OpenCreator to obtain this permission?": "Tillåta OpenCreator att få denna behörighet?",
+  "Allow OpenCreator to send input to the running command?": "Tillåta OpenCreator att skicka indata till det körande kommandot?",
   "Allow local file access and local operations": "Tillåt lokal filåtkomst och lokal verksamhet",
   "Alloy": "Legering",
   "Already queued": "Redan i kö",

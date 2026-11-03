@@ -123,6 +123,7 @@
   "Allow OpenCreator to execute this command?": "Дозволити OpenCreator да изврши ову команду?",
   "Allow OpenCreator to modify project files?": "Дозволити OpenCreator да мења датотеке пројекта?",
   "Allow OpenCreator to obtain this permission?": "Дозволити OpenCreator да добије ову дозволу?",
+  "Allow OpenCreator to send input to the running command?": "Дозволити OpenCreator да пошаље унос покренутој команди?",
   "Allow local file access and local operations": "Дозволите локални приступ датотекама и локалне операције",
   "Alloy": "легура",
   "Already queued": "Већ у реду",

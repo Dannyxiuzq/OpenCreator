@@ -123,6 +123,7 @@
   "Allow OpenCreator to execute this command?": "هل تسمح لـ OpenCreator بتنفيذ هذا الأمر؟",
   "Allow OpenCreator to modify project files?": "هل تسمح لـ OpenCreator بتعديل ملفات المشروع؟",
   "Allow OpenCreator to obtain this permission?": "هل تسمح لـ OpenCreator بالحصول على هذا الإذن؟",
+  "Allow OpenCreator to send input to the running command?": "هل تسمح لـ OpenCreator بإرسال إدخال إلى الأمر قيد التشغيل؟",
   "Allow local file access and local operations": "السماح بالوصول إلى الملفات المحلية والعمليات المحلية",
   "Alloy": "سبيكة",
   "Already queued": "في قائمة الانتظار بالفعل",

@@ -123,6 +123,7 @@
   "Allow OpenCreator to execute this command?": "OpenCreator ને આ આદેશ ચલાવવાની મંજૂરી આપીએ?",
   "Allow OpenCreator to modify project files?": "OpenCreator ને પ્રોજેક્ટ ફાઇલોમાં ફેરફાર કરવાની મંજૂરી આપીએ?",
   "Allow OpenCreator to obtain this permission?": "OpenCreator ને આ પરવાનગી મેળવવાની મંજૂરી આપીએ?",
+  "Allow OpenCreator to send input to the running command?": "શું OpenCreator ને ચાલી રહેલા આદેશમાં ઇનપુટ મોકલવાની મંજૂરી આપવી?",
   "Allow local file access and local operations": "સ્થાનિક ફાઇલ ઍક્સેસ અને સ્થાનિક કામગીરીને મંજૂરી આપો",
   "Alloy": "એલોય",
   "Already queued": "પહેલેથી જ કતારબદ્ધ",

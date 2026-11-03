@@ -137,6 +137,7 @@
   "Allow OpenCreator to execute this command?": "Toestaan ​​dat OpenCreator deze opdracht uitvoert?",
   "Allow OpenCreator to modify project files?": "Toestaan ​​dat OpenCreator projectbestanden wijzigt?",
   "Allow OpenCreator to obtain this permission?": "Toestaan ​​dat OpenCreator deze toestemming verkrijgt?",
+  "Allow OpenCreator to send input to the running command?": "OpenCreator toestaan invoer naar de actieve opdracht te sturen?",
   "Allow local file access and local operations": "Sta lokale bestandstoegang en lokale bewerkingen toe",
   "Alloy": "Legering",
   "Already queued": "Staat al in de wachtrij",

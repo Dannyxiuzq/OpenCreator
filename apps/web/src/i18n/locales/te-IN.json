@@ -123,6 +123,7 @@
   "Allow OpenCreator to execute this command?": "ఈ ఆదేశాన్ని అమలు చేయడానికి OpenCreatorని అనుమతించాలా?",
   "Allow OpenCreator to modify project files?": "ప్రాజెక్ట్ ఫైల్‌లను సవరించడానికి OpenCreatorని అనుమతించాలా?",
   "Allow OpenCreator to obtain this permission?": "ఈ అనుమతిని పొందేందుకు OpenCreatorని అనుమతించాలా?",
+  "Allow OpenCreator to send input to the running command?": "నడుస్తున్న కమాండ్‌కు ఇన్‌పుట్ పంపడానికి OpenCreator-ను అనుమతించాలా?",
   "Allow local file access and local operations": "స్థానిక ఫైల్ యాక్సెస్ మరియు స్థానిక కార్యకలాపాలను అనుమతించండి",
   "Alloy": "మిశ్రమం",
   "Already queued": "ఇప్పటికే క్యూలో ఉన్నారు",

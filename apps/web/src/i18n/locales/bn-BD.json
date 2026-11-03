@@ -137,6 +137,7 @@
   "Allow OpenCreator to execute this command?": "OpenCreator কে এই কমান্ডটি চালানোর অনুমতি দেবেন?",
   "Allow OpenCreator to modify project files?": "প্রজেক্ট ফাইলগুলি পরিবর্তন করতে OpenCreator কে অনুমতি দেবেন?",
   "Allow OpenCreator to obtain this permission?": "OpenCreator কে এই অনুমতি পেতে দেবেন?",
+  "Allow OpenCreator to send input to the running command?": "OpenCreator-কে চলমান কমান্ডে ইনপুট পাঠানোর অনুমতি দেবেন?",
   "Allow local file access and local operations": "স্থানীয় ফাইল অ্যাক্সেস এবং স্থানীয় অপারেশন অনুমতি দিন",
   "Alloy": "খাদ",
   "Already queued": "ইতিমধ্যেই সারিবদ্ধ",

@@ -137,6 +137,7 @@
   "Allow OpenCreator to execute this command?": "Izinkan OpenCreator menjalankan perintah ini?",
   "Allow OpenCreator to modify project files?": "Izinkan OpenCreator mengubah file proyek?",
   "Allow OpenCreator to obtain this permission?": "Izinkan OpenCreator mendapatkan izin ini?",
+  "Allow OpenCreator to send input to the running command?": "Izinkan OpenCreator mengirim input ke perintah yang sedang berjalan?",
   "Allow local file access and local operations": "Izinkan akses file lokal dan operasi lokal",
   "Alloy": "Alloy",
   "Already queued": "Sudah dalam antrean",

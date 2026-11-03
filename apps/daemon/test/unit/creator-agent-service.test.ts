@@ -304,6 +304,29 @@ describe('creator agent service', () => {
     fixture.db.close();
   });
 
+  it('labels a stdin approval as input to the running command', async () => {
+    const runtime = approvalRuntime(4, () => {}, {
+      kind: 'writeStdin',
+      command: 'python3 deploy.py'
+    });
+    const fixture = setup(runtime);
+    const turnPromise = fixture.agent.runTurn(fixture.jobId, {
+      message: '回答正在运行的命令',
+      clientMessageId: 'message-stdin-approval'
+    });
+    const approval = await waitForApproval(fixture.agent, fixture.jobId);
+
+    expect(approval).toMatchObject({
+      kind: 'command_execution',
+      title: 'Approve input to running command',
+      details: { kind: 'writeStdin', command: 'python3 deploy.py' }
+    });
+    expect(fixture.agent.respondApproval(approval.id, 'approved', 4).status)
+      .toBe('approved');
+    await turnPromise;
+    fixture.db.close();
+  });
+
   it('auto-approves read-only Creator tools without creating an approval gate', async () => {
     let observedDecision: AppServerApprovalDecision | undefined;
     const runtime: AgentRuntimeAdapter = {
@@ -445,7 +468,8 @@ function setup(runtime: AgentRuntimeAdapter) {
 
 function approvalRuntime(
   generation: number,
-  observe: (decision: AppServerApprovalDecision) => void
+  observe: (decision: AppServerApprovalDecision) => void,
+  params: Record<string, unknown> = {}
 ): AgentRuntimeAdapter {
   return {
     id: 'fake-approval',
@@ -455,7 +479,7 @@ function approvalRuntime(
       const decision = await input.onApprovalRequest?.({
         id: 'approval-request-1',
         method: 'item/commandExecution/requestApproval',
-        params: { itemId: 'approval-item-1', reason: '需要执行真实命令' }
+        params: { itemId: 'approval-item-1', reason: '需要执行真实命令', ...params }
       });
       observe(decision ?? 'canceled');
       return {

@@ -73,6 +73,38 @@ describe('approval runtime integration', () => {
       ]);
   });
 
+  it('labels a stdin approval as input to the running command', async () => {
+    const fixture = setup('accept', 'read-only', 'writeStdin');
+    const run = fixture.runManager.startRun({
+      prompt: 'answer the running command',
+      cwd: tempDir,
+      sandbox: 'read-only',
+      threadId: fixture.thread.id,
+      resumeMode: 'new_thread'
+    });
+
+    await expect.poll(
+      () => fixture.approvalManager.list({ status: 'pending' })[0],
+      { timeout: 5_000, interval: 20 }
+    ).toMatchObject({
+      runId: run.id,
+      kind: 'command_execution',
+      status: 'pending',
+      title: 'Allow input to running command',
+      details: {
+        command: 'rm -rf build',
+        approvalKind: 'writeStdin'
+      }
+    });
+
+    const approval = fixture.approvalManager.list({ status: 'pending' })[0]!;
+    expect(fixture.approvalManager.approve(approval.id).changed).toBe(true);
+    await expect.poll(
+      () => fixture.runManager.getRun(run.id)?.status,
+      { timeout: 5_000, interval: 20 }
+    ).toBe('succeeded');
+  });
+
   it('returns an official decline response without executing the command', async () => {
     const fixture = setup('decline');
     const run = fixture.runManager.startRun({
@@ -290,7 +322,8 @@ describe('approval runtime integration', () => {
 
 function setup(
   expectedDecision: 'accept' | 'decline' | 'close',
-  sandbox: 'read-only' | 'danger-full-access' = 'read-only'
+  sandbox: 'read-only' | 'danger-full-access' = 'read-only',
+  approvalKind?: 'command' | 'writeStdin'
 ) {
   tempDir = mkdtempSync(join(tmpdir(), 'opencreator-approval-runtime-'));
   db = openRuntimeDatabase(join(tempDir, 'app.sqlite'));
@@ -312,7 +345,7 @@ function setup(
   const createdRunManager = createRunManager({
     db,
     dataDir: tempDir,
-    codexBin: createFakeApprovalAppServer(tempDir, expectedDecision),
+    codexBin: createFakeApprovalAppServer(tempDir, expectedDecision, approvalKind),
     codexHome: join(tempDir, 'codex-home'),
     threadAccess: threadManager,
     resumeCapabilityVerified: true,
@@ -353,8 +386,10 @@ function setupMcpElicitation(
 
 function createFakeApprovalAppServer(
   dir: string,
-  expectedDecision: 'accept' | 'decline' | 'close'
+  expectedDecision: 'accept' | 'decline' | 'close',
+  approvalKind?: 'command' | 'writeStdin'
 ): string {
+  const kindField = approvalKind === undefined ? '' : `kind: ${JSON.stringify(approvalKind)}, `;
   const bin = join(dir, 'fake-approval-codex.js');
   writeFileSync(bin, `#!/usr/bin/env node
 const readline = require('node:readline');
@@ -370,7 +405,7 @@ rl.on('line', line => {
     send({ id: message.id, result: { turn: { id: 'turn-approval', status: 'inProgress' } } });
     send({ method: 'turn/started', params: { threadId: 'codex-thread-approval', turn: { id: 'turn-approval', status: 'inProgress' } } });
     send({ method: 'item/started', params: { threadId: 'codex-thread-approval', turnId: 'turn-approval', item: { type: 'commandExecution', id: 'item-approval', command: 'rm -rf build', cwd: process.cwd(), status: 'inProgress', commandActions: [] } } });
-    send({ id: 'approval-rpc', method: 'item/commandExecution/requestApproval', params: { threadId: 'codex-thread-approval', turnId: 'turn-approval', itemId: 'item-approval', startedAtMs: Date.now(), command: 'rm -rf build', cwd: process.cwd(), reason: 'outside sandbox' } });
+    send({ id: 'approval-rpc', method: 'item/commandExecution/requestApproval', params: { ${kindField}threadId: 'codex-thread-approval', turnId: 'turn-approval', itemId: 'item-approval', startedAtMs: Date.now(), command: 'rm -rf build', cwd: process.cwd(), reason: 'outside sandbox' } });
     if (${JSON.stringify(expectedDecision)} === 'close') setTimeout(() => process.exit(2), 25);
   } else if (message.id === 'approval-rpc') {
     if (!message.result || message.result.decision !== ${JSON.stringify(expectedDecision)}) {

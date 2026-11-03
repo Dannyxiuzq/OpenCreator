@@ -137,6 +137,7 @@
   "Allow OpenCreator to execute this command?": "Cho phép OpenCreator thực thi lệnh này?",
   "Allow OpenCreator to modify project files?": "Cho phép OpenCreator sửa đổi tệp dự án?",
   "Allow OpenCreator to obtain this permission?": "Cho phép OpenCreator nhận quyền này?",
+  "Allow OpenCreator to send input to the running command?": "Cho phép OpenCreator gửi dữ liệu nhập vào lệnh đang chạy?",
   "Allow local file access and local operations": "Cho phép truy cập tệp cục bộ và thao tác cục bộ",
   "Alloy": "Alloy",
   "Already queued": "Đã có trong hàng đợi",

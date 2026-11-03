@@ -124,6 +124,7 @@
   "Allow OpenCreator to execute this command?": "Saako OpenCreator suorittaa tämän komennon?",
   "Allow OpenCreator to modify project files?": "Saako OpenCreator muokata projektitiedostoja?",
   "Allow OpenCreator to obtain this permission?": "Saako OpenCreator saada tämän luvan?",
+  "Allow OpenCreator to send input to the running command?": "Sallitaanko OpenCreatorin lähettää syötettä käynnissä olevalle komennolle?",
   "Allow local file access and local operations": "Salli paikallisten tiedostojen käyttö ja paikalliset toiminnot",
   "Alloy": "Metalliseos",
   "Already queued": "Jo jonossa",

@@ -123,6 +123,7 @@
   "Allow OpenCreator to execute this command?": "Да се ​​позволи на OpenCreator да изпълни тази команда?",
   "Allow OpenCreator to modify project files?": "Да се ​​позволи на OpenCreator да променя файловете на проекта?",
   "Allow OpenCreator to obtain this permission?": "Да се ​​разреши ли на OpenCreator да получи това разрешение?",
+  "Allow OpenCreator to send input to the running command?": "Да се разреши ли на OpenCreator да изпрати вход към изпълняващата се команда?",
   "Allow local file access and local operations": "Разрешете локален достъп до файлове и локални операции",
   "Alloy": "Сплав",
   "Already queued": "Вече на опашка",

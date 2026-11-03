@@ -124,6 +124,7 @@
   "Allow OpenCreator to execute this command?": "Permiteți OpenCreator să execute această comandă?",
   "Allow OpenCreator to modify project files?": "Permiteți lui OpenCreator să modifice fișierele de proiect?",
   "Allow OpenCreator to obtain this permission?": "Permiteți lui OpenCreator să obțină această permisiune?",
+  "Allow OpenCreator to send input to the running command?": "Permiteți OpenCreator să trimită date de intrare comenzii în execuție?",
   "Allow local file access and local operations": "Permite accesul la fișiere locale și operațiuni locale",
   "Alloy": "Aliaj",
   "Already queued": "Deja pus la coadă",

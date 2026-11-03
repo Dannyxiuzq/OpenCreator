@@ -124,6 +124,7 @@
   "Allow OpenCreator to execute this command?": "Engedélyezi a OpenCreator számára a parancs végrehajtását?",
   "Allow OpenCreator to modify project files?": "Engedélyezi a OpenCreator számára a projektfájlok módosítását?",
   "Allow OpenCreator to obtain this permission?": "Engedélyezi a OpenCreator számára, hogy megszerezze ezt az engedélyt?",
+  "Allow OpenCreator to send input to the running command?": "Engedélyezi, hogy az OpenCreator bemenetet küldjön a futó parancsnak?",
   "Allow local file access and local operations": "Helyi fájlhozzáférés és helyi műveletek engedélyezése",
   "Alloy": "Ötvözet",
   "Already queued": "Már sorban áll",

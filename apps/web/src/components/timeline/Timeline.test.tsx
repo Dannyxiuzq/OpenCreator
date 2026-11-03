@@ -135,6 +135,38 @@ describe('Timeline', () => {
     }
   );
 
+  it('describes a resolved stdin approval as input to the running command', () => {
+    render(
+      <Timeline
+        items={[{
+          kind: 'approval',
+          id: 'event_approval_stdin',
+          runId: 'run_stdin',
+          approval: {
+            id: 'approval_stdin',
+            runId: 'run_stdin',
+            threadId: 'thread_stdin',
+            turnId: 'turn_stdin',
+            itemId: 'item_stdin',
+            requestId: 'rpc_stdin',
+            kind: 'command_execution',
+            status: 'approved',
+            risk: 'high',
+            title: 'Allow input to running command',
+            summary: 'python3 deploy.py',
+            details: { command: 'python3 deploy.py', cwd: '/workspace', approvalKind: 'writeStdin' },
+            requestedAt: '2026-07-24T10:00:00.000Z',
+            expiresAt: '2026-07-24T10:10:00.000Z'
+          },
+          source: 'runtime'
+        }]}
+      />
+    );
+
+    expect(screen.getByText('已允许向运行中的命令输入')).toBeInTheDocument();
+    expect(screen.queryByText('已允许执行命令')).not.toBeInTheDocument();
+  });
+
   it('keeps the approved network target in the lightweight approval record', () => {
     render(
       <Timeline

@@ -124,6 +124,7 @@
   "Allow OpenCreator to execute this command?": "Vil du tillate OpenCreator å utføre denne kommandoen?",
   "Allow OpenCreator to modify project files?": "Tillate OpenCreator å endre prosjektfiler?",
   "Allow OpenCreator to obtain this permission?": "Vil du tillate at OpenCreator får denne tillatelsen?",
+  "Allow OpenCreator to send input to the running command?": "Tillate OpenCreator å sende inndata til kommandoen som kjører?",
   "Allow local file access and local operations": "Tillat lokal filtilgang og lokale operasjoner",
   "Alloy": "Legering",
   "Already queued": "Allerede i kø",
