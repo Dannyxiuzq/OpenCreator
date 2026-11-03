@@ -235,6 +235,13 @@ export function credentialFreshness(authJsonText, now = Date.now()) {
   return { chatgpt: true, authMode, fresh: refreshOk, refreshOk };
 }
 
+export function staleTokenMessage(freshness) {
+  const reason = freshness.accessOk === false
+    ? 'expires within 30 minutes'
+    : 'was last refreshed about a week ago, so Codex is about to refresh it';
+  return `The ChatGPT access token in the source home ${reason}. Keep using the official Codex app until it has refreshed the token in place, then rerun. --allow-refresh overrides this, but refreshing a copy can sign the official app out.`;
+}
+
 // Refuses anything but a ChatGPT login before a single request is sent.
 export function requireChatgptLogin(authJsonText, where) {
   const freshness = credentialFreshness(authJsonText);
@@ -509,7 +516,7 @@ async function main() {
     if (!existsSync(sourceAuth)) throw new Error(`No auth.json in ${options.sourceHome}; sign in with the official Codex app or use --login`);
     const freshness = requireChatgptLogin(readFileSync(sourceAuth, 'utf8'), options.sourceHome);
     if (!freshness.fresh && !options.allowRefresh) {
-      throw new Error('The ChatGPT access token in the source home expires within 30 minutes. Keep using the official Codex app until it has refreshed the token in place (it refreshes in the last minutes before expiry), then rerun. --allow-refresh overrides this, but refreshing a copy can sign the official app out.');
+      throw new Error(staleTokenMessage(freshness));
     }
     sync = await loadOpenCreatorHomeSync();
   }

@@ -12,23 +12,25 @@
 //   node --import tsx scripts/codex-runtime-ab/source-run-check.mjs --mock
 //   node --import tsx scripts/codex-runtime-ab/source-run-check.mjs --from-codex-home ~/.codex
 //
-// All OpenCreator data lives in a fresh directory under --work-dir; the production app data,
-// database and Runtime Home are never used. --from-codex-home is only read (the daemon copies
-// auth.json and the minimal config exactly like the desktop app does) and must hold a ChatGPT
-// login: anything else is refused before a request is sent. The project folder lives in the
-// system temp directory, outside any git checkout, like a real OpenCreator project. Tokens,
-// e-mail addresses and file contents of auth/config are never printed.
+// All OpenCreator data lives in a fresh directory under --home-root (default
+// ~/.opencreator-isolated/source-run) and is removed afterwards; reports stay under --work-dir.
+// The production app data, database and Runtime Home are never used. --from-codex-home is only
+// read (the daemon copies auth.json and the minimal config exactly like the desktop app does)
+// and must hold a ChatGPT login: anything else is refused before a request is sent. The project
+// folder lives in the system temp directory, outside any git checkout, like a real OpenCreator
+// project. Tokens, e-mail addresses and file contents of auth/config are never printed.
 import { createRequire } from 'node:module';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmdirSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { requireChatgptLogin } from './codex-ab.mjs';
+import { requireChatgptLogin, staleTokenMessage } from './codex-ab.mjs';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(SCRIPT_DIR, '../..');
 const DAEMON_SRC = join(REPO_ROOT, 'apps', 'daemon', 'src');
 const TOKEN = 'source-run-check';
+const DEFAULT_HOME_ROOT = join(homedir(), '.opencreator-isolated', 'source-run');
 const SUBTITLE_SYSTEM = 'You are an assistant that helps with subtitle translation.';
 const SUBTITLE_USER = [
   'Translate the following subtitles into Simplified Chinese. Keep the numbering and timestamps.',
@@ -39,6 +41,7 @@ const SUBTITLE_USER = [
 function parseArgs(argv) {
   const options = {
     workDir: join(REPO_ROOT, '.tmp', 'codex-source-run'),
+    homeRoot: DEFAULT_HOME_ROOT,
     runtimeRoot: join(REPO_ROOT, 'apps', 'desktop', '.pack', 'codex-runtime'),
     keep: false,
     timeoutMs: 180_000
@@ -56,6 +59,7 @@ function parseArgs(argv) {
     else if (flag === '--model') options.model = next();
     else if (flag === '--runtime-root') options.runtimeRoot = resolve(next());
     else if (flag === '--work-dir') options.workDir = resolve(next());
+    else if (flag === '--home-root') options.homeRoot = resolve(next().replace(/^~(?=$|\/)/, homedir()));
     else if (flag === '--keep') options.keep = true;
     else if (flag === '--allow-refresh') options.allowRefresh = true;
     else if (flag === '--timeout-ms') options.timeoutMs = Number(next());
@@ -78,38 +82,96 @@ const redact = text => String(text)
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
-    process.stdout.write('Usage: node --import tsx scripts/codex-runtime-ab/source-run-check.mjs --mock | --from-codex-home <dir> [--model <slug>] [--keep]\n');
+    process.stdout.write('Usage: node --import tsx scripts/codex-runtime-ab/source-run-check.mjs --mock | --from-codex-home <dir> [--model <slug>] [--work-dir <reports>] [--home-root <dir>] [--keep]\n');
     return;
   }
   const { verifyCodexRuntime } = await import(pathToFileURL(join(REPO_ROOT, 'apps', 'desktop', 'scripts', 'codex-runtime-contract.mjs')).href);
   const manifest = verifyCodexRuntime(options.runtimeRoot, process.platform, process.arch);
   const codexBin = join(options.runtimeRoot, manifest.binary.relativePath);
-  const runRoot = join(options.workDir, `run-${new Date().toISOString().replace(/[:.]/g, '-')}`);
-  const appHome = join(runRoot, 'opencreator-home');
+  // The OpenCreator home is deleted after the run while reports are kept, so they must differ.
+  if (canonicalPath(options.workDir) === canonicalPath(options.homeRoot)) {
+    throw new Error('--work-dir and --home-root must be different directories: the home is deleted after the run, the report is kept');
+  }
+  const runName = `run-${new Date().toISOString().replace(/[:.]/g, '-')}`;
+  const runRoot = join(options.workDir, runName);
+  // The OpenCreator home (Runtime Homes, data, Creator workspaces) sits outside the checkout, so
+  // no turn picks up the repository's AGENTS.md, and outside the system temp directory like the
+  // real app's Runtime Home (on Linux, Codex refuses to put its apply_patch helper aliases under a
+  // temporary CODEX_HOME; on macOS $TMPDIR resolves through a symlink and that guard does not apply).
+  const appHome = join(options.homeRoot, runName);
   const dataDir = join(appHome, 'data');
   const codexHome = join(appHome, 'runtime', 'codex');
   // Outside the checkout, so Codex does not add the repository's AGENTS.md to the prompts.
   const projectDir = realpathSync(mkdtempSync(join(tmpdir(), 'opencreator-source-run-')));
-  for (const dir of [dataDir, codexHome]) mkdirSync(dir, { recursive: true, mode: 0o700 });
+  for (const dir of [runRoot, dataDir, codexHome]) mkdirSync(dir, { recursive: true, mode: 0o700 });
   // The isolated homes hold a copy of the ChatGPT credential: remove them on every exit path.
   const cleanup = () => {
     if (options.keep) return;
-    for (const dir of ['opencreator-home', 'local-codex']) rmSync(join(runRoot, dir), { recursive: true, force: true });
+    rmSync(appHome, { recursive: true, force: true });
+    rmSync(join(runRoot, 'local-codex'), { recursive: true, force: true });
     rmSync(projectDir, { recursive: true, force: true });
+    // Drop the default parents only when they are empty (an isolated test package may live next
+    // to them). A custom --home-root is left in place.
+    if (options.homeRoot === DEFAULT_HOME_ROOT) {
+      for (const dir of [options.homeRoot, dirname(options.homeRoot)]) {
+        try { rmdirSync(dir); } catch { /* not empty or already gone */ }
+      }
+    }
   };
   process.once('exit', cleanup);
-  for (const signal of ['SIGINT', 'SIGTERM']) {
-    process.once(signal, () => {
-      cleanup();
-      process.exit(130);
+
+  // Codex app-servers run detached, outlive this process and would recreate files in the home
+  // after it is deleted, so a signal first stops everything that is still running.
+  let mock;
+  let server;
+  const closers = new Set();
+  let stopping = false;
+  for (const [signal, code] of [['SIGINT', 130], ['SIGTERM', 143], ['SIGHUP', 129]]) {
+    process.on(signal, () => {
+      const finish = async () => {
+        cleanup();
+        // A Codex process that was just told to stop can still flush a few files into the home;
+        // keep deleting until it stays gone.
+        for (let quiet = 0, round = 0; !options.keep && quiet < 4 && round < 20; round += 1) {
+          await sleep(500);
+          if (existsSync(appHome)) {
+            quiet = 0;
+            cleanup();
+          } else {
+            quiet += 1;
+          }
+        }
+        process.exit(code);
+      };
+      if (stopping) {
+        cleanup();
+        process.exit(code);
+      }
+      stopping = true;
+      try {
+        process.stderr.write('\n[source-run] interrupted: stopping Codex processes and removing the test home\n');
+      } catch { /* the terminal may be gone */ }
+      const deadline = setTimeout(finish, 15_000);
+      (async () => {
+        // A check that is still running may register something new while others close.
+        for (let pass = 0; pass < 5 && closers.size > 0; pass += 1) {
+          for (const close of [...closers].reverse()) {
+            closers.delete(close);
+            try { await close(); } catch { /* best effort */ }
+          }
+        }
+      })().finally(() => {
+        clearTimeout(deadline);
+        finish();
+      });
     });
   }
 
-  let mock;
   let localCodexHome = options.sourceHome;
   const scenario = { approvalSeen: false };
   if (options.mock) {
     mock = await startScenarioMock(runRoot, scenario);
+    closers.add(() => mock.close());
     localCodexHome = join(runRoot, 'local-codex');
     mkdirSync(localCodexHome, { recursive: true, mode: 0o700 });
     writeFileSync(join(localCodexHome, 'auth.json'), fakeChatgptAuth(), { mode: 0o600 });
@@ -125,7 +187,7 @@ async function main() {
     if (!existsSync(authPath)) throw new Error(`No auth.json in ${localCodexHome}`);
     const freshness = requireChatgptLogin(readFileSync(authPath, 'utf8'), localCodexHome);
     if (!freshness.fresh && !options.allowRefresh) {
-      throw new Error('The ChatGPT access token in the source home expires within 30 minutes. Keep using the official Codex app until it has refreshed the token in place (it refreshes in the last minutes before expiry), then rerun. --allow-refresh overrides this, but refreshing a copy can sign the official app out.');
+      throw new Error(staleTokenMessage(freshness));
     }
   }
   // Same rule as codex-ab.mjs, plus provider keys: Codex honours e.g. CODEX_ACCESS_TOKEN and
@@ -149,6 +211,7 @@ async function main() {
 
   const results = [];
   const check = async (name, run) => {
+    if (stopping) return;
     const started = Date.now();
     try {
       const evidence = await run();
@@ -156,6 +219,8 @@ async function main() {
     } catch (error) {
       results.push({ name, status: 'FAIL', ms: Date.now() - started, error: redact(error instanceof Error ? error.message : String(error)).slice(0, 600) });
     }
+    // An interrupted run is not a result: checks cut short by the stop are not reported.
+    if (stopping) return;
     const last = results.at(-1);
     console.log(`[source-run] ${last.status.padEnd(9)} ${name} (${last.ms} ms)${last.error ? ` - ${last.error}` : ''}`);
     if (last.status !== 'PASS' && last.evidence !== undefined) console.log(`             evidence: ${JSON.stringify(last.evidence).slice(0, 800)}`);
@@ -170,7 +235,8 @@ async function main() {
     capabilities: snapshot.capabilities, resumeCapabilityVerified: true,
     persistentAppServerEnabled: true, agentToolsEnabled: false, schedulerAutostart: false
   });
-  let server = await start();
+  server = await start();
+  closers.add(() => server?.close());
   const api = async (method, url, payload) => {
     const response = await server.inject({ method, url, headers: { authorization: `Bearer ${TOKEN}` }, ...(payload === undefined ? {} : { payload }) });
     let json;
@@ -224,6 +290,8 @@ async function main() {
       // The picker keeps only the two newest GPT families, so also read Codex's full model list,
       // and the account type straight from Codex.
       const client = createCodexAppServerClient({ codexBin, codexHome, cwd: dataDir });
+      const closeClient = () => client.close();
+      closers.add(closeClient);
       let accountType;
       const catalogIds = [];
       try {
@@ -235,6 +303,7 @@ async function main() {
           cursor = page?.nextCursor ?? undefined;
         } while (cursor !== undefined);
       } finally {
+        closers.delete(closeClient);
         await client.close();
       }
       chatgptLogin = accountType === 'chatgpt';
@@ -365,11 +434,11 @@ async function main() {
         const run = await waitRun(created.json.id, ['succeeded', 'failed', 'canceled']);
         return { status: options.mock ? 'FAIL' : 'UNVERIFIED', note: 'the model finished without requesting an approval', runStatus: run.status, model: approvalModel };
       }
-      // Approve only the exact command in the check project; anything else runs outside the
-      // sandbox with your permissions, so reject it.
+      // Approve only the exact command in the check project folder; anything else would run
+      // outside the sandbox with your permissions, so reject it.
       const command = typeof approval.details?.command === 'string' ? approval.details.command : '';
       const cwd = typeof approval.details?.cwd === 'string' && existsSync(approval.details.cwd) ? realpathSync(approval.details.cwd) : undefined;
-      const expected = approval.kind === 'command_execution' && isExpectedTouchCommand(command) && (cwd === undefined || cwd === projectDir);
+      const expected = approval.kind === 'command_execution' && isExpectedTouchCommand(command) && cwd === projectDir;
       if (!expected) {
         const decision = await api('POST', `/approvals/${approval.id}/reject`);
         const run = await waitRun(created.json.id, ['succeeded', 'failed', 'canceled']);
@@ -411,6 +480,7 @@ async function main() {
     });
 
     await check(`short subtitle translation (Krillin text gateway, ${configModelLabel})`, async () => {
+      if (stopping) throw new Error('interrupted');
       const Fastify = await loadDaemonDependency('fastify');
       const gatewayServer = Fastify();
       // Same construction as apps/daemon/src/api/server.ts.
@@ -419,6 +489,11 @@ async function main() {
         readLocalConfiguration: () => readLocalCodexModelConfiguration({ codexHome: localCodexHome }),
         readConfiguration: createFollowingLocalCodexHome(localCodexHome, join(appHome, 'runtime', 'creator-text-codex'))
       });
+      const closeGateway = async () => {
+        await gateway.close();
+        await gatewayServer.close();
+      };
+      closers.add(closeGateway);
       try {
         await gateway.register(gatewayServer);
         const config = gateway.config('http://127.0.0.1');
@@ -436,14 +511,18 @@ async function main() {
           http: response.statusCode, keepsTimestamps, translation: redact(content).slice(0, 400)
         };
       } finally {
+        closers.delete(closeGateway);
         await gateway.close();
         await gatewayServer.close();
       }
     });
   } finally {
-    await server?.close();
-    await mock?.close();
+    if (!stopping) {
+      await server?.close();
+      await mock?.close();
+    }
   }
+  if (stopping) return;
 
   const report = {
     generatedAt: new Date().toISOString(),
@@ -463,10 +542,20 @@ async function main() {
   if (failed.length > 0) process.exitCode = 1;
 }
 
-// `touch approved.txt`, optionally wrapped in a login shell (`/bin/zsh -lc '...'`).
+// `touch approved.txt`, optionally wrapped in the user's login shell, which Codex names by its
+// path (`/bin/zsh -lc '...'`, `/opt/homebrew/bin/zsh -lc '...'`).
 function isExpectedTouchCommand(command) {
-  const unwrapped = command.trim().replace(/^(?:\/(?:usr\/)?bin\/)?(?:ba|z)?sh\s+-l?c\s+(['"])(.*)\1$/s, '$2').trim();
+  const unwrapped = command.trim()
+    .replace(/^(?:(?:\/[\w.+-]+)*\/)?(?:ba|z)?sh\s+-l?c\s+(['"])(.*)\1$/s, '$2').trim();
   return unwrapped === 'touch approved.txt';
+}
+
+function canonicalPath(path) {
+  try {
+    return realpathSync(path);
+  } catch {
+    return resolve(path);
+  }
 }
 
 function readCodexModel(codexHome) {
